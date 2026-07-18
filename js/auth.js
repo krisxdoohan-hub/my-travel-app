@@ -44,6 +44,19 @@ async function handleFirebaseLogin() {
     if(typeof showLoading === 'function') showLoading("登入驗證中...");
     
     try {
+        // 新增：偵測是否尚未設定 GAS 網址
+        const gasUrl = (typeof CONFIG !== 'undefined' && CONFIG.GAS_URL) || 
+                       (window.vueAppInstance && window.vueAppInstance.gasUrl) || 
+                       localStorage.getItem('gasUrl');
+                       
+        if (!gasUrl || gasUrl.trim() === '') {
+            // 尚未連線 GAS，以一般訪客身分進入
+            const userObj = { uid: account, account: account, isOfflineGuest: true };
+            localStorage.setItem('userAuth', JSON.stringify(userObj));
+            checkAuthState(userObj);
+            return;
+        }
+
         const response = await callGasAuthAPI('login', { account, password });
         
         if (response.success) {
@@ -63,6 +76,7 @@ async function handleFirebaseLogin() {
         if(typeof hideLoading === 'function') hideLoading();
     }
 }
+
 // 註冊邏輯
 async function handleFirebaseRegister() {
     const account = document.getElementById('fb-account').value;
@@ -82,6 +96,21 @@ async function handleFirebaseRegister() {
     if(typeof showLoading === 'function') showLoading("註冊資料建立中...");
     
     try {
+        // 新增：偵測是否尚未設定 GAS 網址
+        const gasUrl = (typeof CONFIG !== 'undefined' && CONFIG.GAS_URL) || 
+                       (window.vueAppInstance && window.vueAppInstance.gasUrl) || 
+                       localStorage.getItem('gasUrl');
+
+        if (!gasUrl || gasUrl.trim() === '') {
+            // 尚未連線 GAS，提示已建置訪客並引導登入
+            document.getElementById('fb-password').value = '';
+            errorMsg.innerText = "尚未連線 GAS 網頁連結，已為您建立一般訪客帳號，請直接登入！";
+            errorMsg.style.opacity = '1';
+            errorMsg.classList.remove('text-rose-400');
+            errorMsg.classList.add('text-teal-400');
+            return;
+        }
+
         const response = await callGasAuthAPI('register', { account, password });
         
         if (response.success) {
