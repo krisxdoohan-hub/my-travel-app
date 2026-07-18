@@ -76,5 +76,36 @@ const API = {
         const result = await response.json();
         if (!result.success) throw new Error(result.error || '建立專案失敗');
         return result;
+    },
+
+    // 新增：解開封存專案
+    async unarchiveToCloud(gasUrl, sheetName) {
+        const url = gasUrl.includes('?') ? `${gasUrl}&action=unarchiveProject` : `${gasUrl}?action=unarchiveProject`;
+        const response = await fetch(url, {
+            method: 'POST',
+            body: JSON.stringify({ projectName: sheetName }),
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+        });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error || '解開封存失敗');
+        return result.data;
+    },
+
+    // 新增：寫入歷史軌跡
+    async logHistory(gasUrl, user, projectName, actionName, details) {
+        const url = gasUrl.includes('?') ? `${gasUrl}&action=logAction` : `${gasUrl}?action=logAction`;
+        const response = await fetch(url, {
+            method: 'POST',
+            body: JSON.stringify({ 
+                user: user, 
+                projectName: projectName, 
+                actionName: actionName, 
+                details: details 
+            }),
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+        });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error || '歷史軌跡寫入失敗');
+        return result.data;
     }
 };
