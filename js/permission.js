@@ -27,7 +27,14 @@ const PermissionManager = {
         // 若為最高管理者，無條件放行
         if (this.permissions.isSuperAdmin) return true;
         
-        return !!this.permissions[action];
+        // 定義管理者專屬操作
+        const adminOnlyActions = ['manageSystem', 'manageUsers', 'assignPermissions', 'deleteProject'];
+        if (adminOnlyActions.includes(action)) {
+            return !!this.permissions[action];
+        }
+        
+        // 開放一般訪客全功能操作（非管理者權限限定）
+        return true;
     },
 
     // 取得所有權限狀態供 Vue 綁定
