@@ -156,7 +156,17 @@ const appInstance = createApp({
 methods: {
         checkPermission(action) {
             if (this.isSuperAdmin) return true;
-            return !!this.userPermissions[action];
+            
+            // 定義嚴格限定「管理者」才能執行的操作名稱 (可依據實際專案定義增減)
+            const adminOnlyActions = ['manageSystem', 'manageUsers', 'assignPermissions', 'deleteProject'];
+            
+            // 如果是管理者專屬功能，才嚴格檢查 GAS 核發的權限
+            if (adminOnlyActions.includes(action)) {
+                return !!this.userPermissions[action];
+            }
+            
+            // 一般訪客可以進行所有非管理者權限限定的全功能操作
+            return true;
         },
         async fetchUserPermissions(username) {
             if (!this.gasUrl) return;
@@ -166,6 +176,7 @@ methods: {
                 this.isSuperAdmin = !!perms.isSuperAdmin;
             }
         },
+
         handleTabChange(tabName) {
             this.currentTab = tabName;
             if (tabName.startsWith('day-')) {
@@ -178,6 +189,7 @@ methods: {
                 MapManager.abortCurrentTasks();
             }
         },
+
         handleViewMode(mode) {
             this.dayViewMode = mode;
             if (mode === 'map') {
@@ -447,10 +459,12 @@ methods: {
         },
                 async copySyncCode() {
             try {
-                await navigator.clipboard.writeText(this.getAllData());
-                alert('已複製完整行程代碼！您可至其他裝置貼上此代碼。');
+                // 修改：僅複製雲端目錄網址(GAS網頁連結)
+                const codeToCopy = this.gasUrl ? this.gasUrl : '尚未設定 GAS 網頁連結';
+                await navigator.clipboard.writeText(codeToCopy);
+                alert('已複製雲端目錄網址 (GAS網頁連結)！您可至其他裝置貼上此連結。');
             } catch (e) {
-                alert('瀏覽器不支援自動複製，請改用檔案下載方式。');
+                alert('瀏覽器不支援自動複製，請改用手動複製。');
             }
         },
         async pasteSyncCode() {
