@@ -1,8 +1,23 @@
 // js/app.js
 const { createApp } = Vue;
 
-const appInstance = createApp({
-    data() {        const urlParams = new URLSearchParams(window.location.search);
+// 修正：統一從 auth.js 實際寫入的 'userAuth' key 取得帳號，
+// 取代過去讀取「從未被寫入過」的 'currentUser' key 所導致的權限誤判
+function getCurrentAccount() {
+    try {
+        const stored = localStorage.getItem('userAuth');
+        if (stored) {
+            const user = JSON.parse(stored);
+            return user.account || user.uid || 'guest';
+        }
+    } catch (e) {
+        console.warn('讀取登入帳號失敗:', e);
+    }
+    return 'guest';
+}
+
+const appInstance = createApp({  
+        data() {        const urlParams = new URLSearchParams(window.location.search);
         const isGuestUrl = urlParams.get('guest') === '1';
         const isUnlockUrl = urlParams.get('unlock') === '1';
         const cleanUrl = window.location.origin + window.location.pathname;
@@ -153,15 +168,17 @@ const appInstance = createApp({
     mounted() {
         this.loadFromLocal();
         // 系統啟動時，抓取本地紀錄的使用者，向 GAS 獲取該人員對應的權限
-        const currentUser = localStorage.getItem('currentUser') || 'guest';
+        // 修正：改用 getCurrentAccount()，避免讀取從未寫入過的 'currentUser' key
+        const currentUser = getCurrentAccount();
         this.fetchUserPermissions(currentUser);
     },
 
 methods: {
         async sysLogAction(actionName, details = '') {
             if (!this.gasUrl) return; 
-            // 嘗試多種可能的 key 來獲取帳號，並加入管理者判斷
-            const storedUser = localStorage.getItem('currentUser') || localStorage.getItem('account') || localStorage.getItem('fb-account') || (this.isTravelGuest ? '一般訪客' : '管理者');
+            // 修正：'account'、'fb-account' 從未被寫入過 localStorage（fb-account 只是登入表單的 DOM id），
+            // 改為統一呼叫 getCurrentAccount() 讀取 auth.js 實際寫入的 'userAuth'
+            const storedUser = getCurrentAccount() !== 'guest' ? getCurrentAccount() : (this.isTravelGuest ? '一般訪客' : '管理者');
             let userName = (this.userPermissions && this.userPermissions.name) ? this.userPermissions.name : storedUser;
             
             // 系統強制修正：確保留有管理權限(解鎖)的當下操作不被記錄為 guest
@@ -671,7 +688,8 @@ methods: {
             this.isSyncing = true;
             this.syncMessage = '正在讀取雲端封存清單...';
             try {
-                const currentUser = localStorage.getItem('currentUser') || 'guest';
+                // 修正：改用 getCurrentAccount()，確保管理者身分能正確查到所有封存專案
+                const currentUser = getCurrentAccount();
                 const list = await API.fetchCloudList(this.gasUrl, currentUser);
                 
                 // 過濾出所有已封存的專案
@@ -799,7 +817,8 @@ methods: {
             this.sysLogAction('讀取雲端行程目錄');
             try {
                 // 取得當前登入者帳號，若無則預設為 guest
-                const currentUser = localStorage.getItem('currentUser') || 'guest';
+                // 修正：改用 getCurrentAccount()，避免讀取從未寫入過的 'currentUser' key
+                const currentUser = getCurrentAccount();
                 
                 // 將原本的 !this.isTravelGuest 改為傳遞帳號 currentUser，以利後端進行權限判斷
                 const list = await API.fetchCloudList(this.gasUrl, currentUser);
@@ -830,7 +849,8 @@ methods: {
                 this.restoreData(data);
                 
                 // 【核心補齊】：載入不同專案行程後，必須立刻向 GAS 重新驗證該專案的人員權限配置
-                const currentUser = localStorage.getItem('currentUser') || 'guest';
+                // 修正：改用 getCurrentAccount()，避免讀取從未寫入過的 'currentUser' key
+                const currentUser = getCurrentAccount();
                 await this.fetchUserPermissions(currentUser);
                 
                 this.syncSuccess = true;
