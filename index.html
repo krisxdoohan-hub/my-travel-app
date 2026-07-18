@@ -508,9 +508,13 @@
                         <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin mr-1"></i>
                         <i v-else class="fa-solid fa-cloud-arrow-up mr-1"></i>備份
                     </button>
-                    <button v-if="!isTravelGuest" @click="archiveToCloud" :disabled="isSyncing" class="btn-secondary flex-1 border-red-200 text-red-500 hover:bg-red-50">
+                    <button v-if="!isTravelGuest && !tripTitle.startsWith('[已封存]')" @click="archiveToCloud" :disabled="isSyncing" class="btn-secondary flex-1 border-red-200 text-red-500 hover:bg-red-50">
                         <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin mr-1"></i>
                         <i v-else class="fa-solid fa-box-archive mr-1"></i>封存
+                    </button>
+                    <button v-if="!isTravelGuest && tripTitle.startsWith('[已封存]')" @click="unarchiveCurrentTrip" :disabled="isSyncing" class="btn-secondary flex-1 border-yellow-400 text-yellow-600 hover:bg-yellow-50">
+                        <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin mr-1"></i>
+                        <i v-else class="fa-solid fa-box-open mr-1"></i>解開封存
                     </button>
                     <button @click="fetchCloudList" :disabled="isSyncing" class="btn-secondary" :class="isTravelGuest ? 'w-full' : 'flex-1'">
                         <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin mr-1"></i>
