@@ -527,6 +527,11 @@
                         <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin"></i>
                         <i v-else class="fa-solid fa-download"></i>
                     </button>
+                    <!-- 新增解開封存按鈕，放在下載按鈕旁邊 -->
+                    <button v-if="selectedCloudTrip && selectedCloudTrip.startsWith('[已封存]')" @click="unarchiveToCloud" :disabled="isSyncing" class="btn-secondary px-4 border-yellow-300 text-yellow-600 hover:bg-yellow-50">
+                        <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin"></i>
+                        <i v-else class="fa-solid fa-box-open"></i>
+                    </button>
                 </div>
 
                 <p v-if="syncMessage" class="text-[11px] text-center mt-2 font-bold" :class="syncSuccess ? 'text-teal-600' : 'text-red-500'">{{ syncMessage }}</p>
