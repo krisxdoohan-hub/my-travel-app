@@ -154,6 +154,30 @@ const appInstance = createApp({
     },
 
 methods: {
+        async sysLogAction(actionName, details = '') {
+            if (!this.gasUrl) return; 
+            const currentUser = localStorage.getItem('currentUser') || 'guest';
+            const projectName = this.tripTitle || '未命名專案';
+            try {
+                // 若 API.logHistory 已集中註冊則使用 API 物件，否則相容原生 fetch
+                if (window.API && typeof API.logHistory === 'function') {
+                    await API.logHistory(this.gasUrl, currentUser, projectName, actionName, details);
+                } else {
+                    await fetch(this.gasUrl, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            action: 'logAction', 
+                            actionName: actionName, 
+                            user: currentUser,
+                            projectName: projectName,
+                            details: details
+                        })
+                    });
+                }
+            } catch (error) {
+                console.warn('歷史軌跡寫入失敗:', error);
+            }
+        },
         checkPermission(action) {
             if (this.isSuperAdmin) return true;
             
@@ -213,7 +237,7 @@ methods: {
                 const newIndex = this.days.length;
                 this.days.push({ date: dateStr.trim() });
                 this.itineraries[newIndex] = [];
-                if (window.RecordManager) window.RecordManager.logAction('新增天數', { date: dateStr.trim() });
+                this.sysLogAction('新增天數', { date: dateStr.trim() });
                 this.handleTabChange('day-' + newIndex);
             }
         },
@@ -225,13 +249,14 @@ methods: {
                     newItineraries[i] = this.itineraries[i >= index ? i + 1 : i] || [];
                 });
                 this.itineraries = newItineraries;
-                if (window.RecordManager) window.RecordManager.logAction('刪除天數', { dayIndex: index + 1 });
+                this.sysLogAction('刪除天數', { dayIndex: index + 1 });
                 this.handleTabChange('todo');
             }
         },
         editTitle() {
             this.isEditingTitle = true;
             this.$nextTick(() => { this.$refs.titleInput.focus(); });
+            this.sysLogAction('編輯專案標題', { action: '開啟編輯' });
         },
                 initSortable() {
             this.$nextTick(() => {
@@ -253,7 +278,7 @@ methods: {
                             const list = this.itineraries[this.currentDayIndex];
                             const movedItem = list.splice(oldIdx, 1)[0];
                             list.splice(newIdx, 0, movedItem);
-                            if (window.RecordManager) window.RecordManager.logAction('排序行程', { location: movedItem.location, from: oldIdx, to: newIdx });
+                            this.sysLogAction('排序行程', { location: movedItem.location, from: oldIdx, to: newIdx });
                         }
                     }
                 });
@@ -269,26 +294,26 @@ methods: {
                 return;
             }
             this.todos.push({ text: this.newTodoText.trim(), done: false });
-            if (window.RecordManager) window.RecordManager.logAction('新增待辦', { text: this.newTodoText.trim() });
+            this.sysLogAction('新增待辦', { text: this.newTodoText.trim() });
             this.newTodoText = '';
             this.todoError = false;
         },
       deleteTodo(idx) {
             const deletedItem = this.todos[idx];
             this.todos.splice(idx, 1);
-            if (window.RecordManager) window.RecordManager.logAction('刪除待辦', { text: deletedItem.text });
+            this.sysLogAction('刪除待辦', { text: deletedItem.text });
         },
        addShoppingItem() {
             if (this.newShoppingItem.trim()) {
                 this.shoppingList.push({ text: this.newShoppingItem.trim(), bought: false });
-                if (window.RecordManager) window.RecordManager.logAction('新增購物項目', { text: this.newShoppingItem.trim() });
+                this.sysLogAction('新增購物項目', { text: this.newShoppingItem.trim() });
                 this.newShoppingItem = '';
             }
         },
        deleteShoppingItem(idx) {
             const deletedItem = this.shoppingList[idx];
             this.shoppingList.splice(idx, 1);
-            if (window.RecordManager) window.RecordManager.logAction('刪除購物項目', { text: deletedItem.text });
+            this.sysLogAction('刪除購物項目', { text: deletedItem.text });
         },
         getInfoCatIcon(cat) {
             if (cat === '資訊整理') return 'fa-solid fa-folder-open text-teal-600';
@@ -305,14 +330,14 @@ methods: {
                     title: this.infoModalData.title,
                     content: this.infoModalData.content
                 });
-                if (window.RecordManager) window.RecordManager.logAction('新增隨身資訊', { category: this.infoModalData.category, title: this.infoModalData.title });
+                this.sysLogAction('新增隨身資訊', { category: this.infoModalData.category, title: this.infoModalData.title });
                 this.showInfoModal = false;
             }
         },
         deleteInfoItem(catName, idx) {
             const deletedItem = this.infoStation[catName][idx];
             this.infoStation[catName].splice(idx, 1);
-            if (window.RecordManager) window.RecordManager.logAction('刪除隨身資訊', { category: catName, title: deletedItem.title });
+            this.sysLogAction('刪除隨身資訊', { category: catName, title: deletedItem.title });
         },
         openAddModal() {
             this.modalMode = 'add';
@@ -340,11 +365,11 @@ methods: {
                     completed: false
                 };
                 this.itineraries[this.currentDayIndex].push(newItem);
-                if (window.RecordManager) window.RecordManager.logAction('新增行程', { location: newItem.location, category: newItem.category });
+                this.sysLogAction('新增行程', { location: newItem.location, category: newItem.category });
                 this.$nextTick(() => { this.fetchWeatherForItem(newItem); });
             } else {
                 this.itineraries[this.currentDayIndex][this.editItemIndex] = { ...this.modalData };
-                if (window.RecordManager) window.RecordManager.logAction('編輯行程', { location: this.modalData.location });
+                this.sysLogAction('編輯行程', { location: this.modalData.location });
                 this.$nextTick(() => { this.fetchWeatherForItem(this.itineraries[this.currentDayIndex][this.editItemIndex]); });
             }
             this.showItineraryModal = false;
@@ -354,7 +379,7 @@ methods: {
      deleteItineraryItem(idx) {
             const deletedItem = this.itineraries[this.currentDayIndex][idx];
             this.itineraries[this.currentDayIndex].splice(idx, 1);
-            if (window.RecordManager) window.RecordManager.logAction('刪除行程', { location: deletedItem.location });
+            this.sysLogAction('刪除行程', { location: deletedItem.location });
             if (this.dayViewMode === 'map') this.updateMapMarkers();
         },
         openExternalNav(idx) {
@@ -453,6 +478,11 @@ methods: {
                 if (!silent) alert('資料還原成功！');
                 if (this.dayViewMode === 'map') this.updateMapMarkers();
                 this.showSyncModal = false;
+                
+                // 寫入軌跡 (如果不是系統自動本機還原的話)
+                if (!silent) {
+                    this.sysLogAction('匯入/還原紀錄檔', { type: '手動還原', projectName: this.tripTitle });
+                }
             } catch (e) {
                 if (!silent) alert('資料格式錯誤，還原失敗。');
             }
@@ -467,6 +497,7 @@ methods: {
                 // 修改：將 GAS 網址進行 Base64 加密與混淆，並加上專屬識別前綴
                 const encryptedCode = 'SYNC::' + btoa(encodeURIComponent(this.gasUrl));
                 await navigator.clipboard.writeText(encryptedCode);
+                this.sysLogAction('複製同步代碼', { status: '成功' });
                 alert('已複製加密同步代碼！您可至其他裝置貼上此代碼。');
             } catch (e) {
                 alert('瀏覽器不支援自動複製，請改用手動複製。');
@@ -483,6 +514,7 @@ methods: {
                         const decodedUrl = decodeURIComponent(atob(text.replace('SYNC::', '')));
                         this.gasUrl = decodedUrl;
                         this.saveToLocal();
+                        this.sysLogAction('貼上同步代碼', { type: '綁定雲端連結成功' });
                         alert('同步代碼解析成功！GAS 網址已更新。');
                     } catch (err) {
                         alert('無效的同步代碼，解析失敗。');
@@ -514,6 +546,7 @@ methods: {
             document.body.appendChild(downloadNode);
             downloadNode.click();
             downloadNode.remove();
+            this.sysLogAction('匯出紀錄檔', { projectName: this.tripTitle });
         },
         uploadJSON(event) {
             const file = event.target.files[0];
@@ -548,6 +581,7 @@ methods: {
                     // 呼叫 GAS 新增獨立工作頁
                     await API.createNewProject(this.gasUrl, newTitle);
                     await this.saveToCloud(); 
+                    this.sysLogAction('建立新專案', { projectName: newTitle, cloud: true });
                     this.syncSuccess = true;
                     this.syncMessage = '新專案建立成功！';
                     this.fetchCloudList(); // 更新雲端目錄清單
@@ -558,6 +592,7 @@ methods: {
                     this.isSyncing = false;
                 }
             } else {
+                this.sysLogAction('建立新專案', { projectName: newTitle, cloud: false });
                 alert('已於本機建立新專案！若需跨裝置同步，請先設定 GAS 網址並備份。');
             }
         },
@@ -570,6 +605,7 @@ methods: {
             this.syncMessage = '正在上傳至雲端試算表...';
             try {
                 await API.saveToCloud(this.gasUrl, this.tripTitle, this.getAllData());
+                this.sysLogAction('手動雲端備份', { projectName: this.tripTitle });
                 this.syncSuccess = true;
                 this.syncMessage = '雲端備份成功！';
             } catch (error) {
@@ -590,12 +626,53 @@ methods: {
             this.syncMessage = '正在封存雲端行程...';
             try {
                 await API.archiveToCloud(this.gasUrl, this.tripTitle);
+                this.sysLogAction('封存專案', { projectName: this.tripTitle });
                 this.syncSuccess = true;
                 this.syncMessage = '雲端行程封存成功！';
                 this.fetchCloudList(); // 重新讀取目錄以更新下拉選單
             } catch (error) {
                 this.syncSuccess = false;
                 this.syncMessage = '封存失敗：' + error.message;
+            } finally {
+                this.isSyncing = false;
+            }
+        },
+        // 新增解開封存函式
+        async unarchiveToCloud() {
+            if (!this.gasUrl.trim()) {
+                this.gasUrlError = true;
+                return;
+            }
+            if (!this.selectedCloudTrip || !this.selectedCloudTrip.startsWith('[已封存]')) {
+                alert('請先從下方選單選擇一個「已封存」的專案，才能進行解開封存！');
+                return;
+            }
+            
+            if (!confirm(`確定要將「${this.selectedCloudTrip}」解開封存嗎？`)) return;
+            
+            this.isSyncing = true;
+            this.syncMessage = '正在解開封存雲端行程...';
+            try {
+                if (window.API && typeof API.unarchiveToCloud === 'function') {
+                    await API.unarchiveToCloud(this.gasUrl, this.selectedCloudTrip);
+                } else {
+                    // 若尚無 API 套件，提供直接原生調用作為備援防呆
+                    await fetch(this.gasUrl, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            action: 'unarchiveProject',
+                            projectName: this.selectedCloudTrip
+                        })
+                    });
+                }
+                
+                this.sysLogAction('解開封存專案', { projectName: this.selectedCloudTrip });
+                this.syncSuccess = true;
+                this.syncMessage = '雲端行程解開封存成功！';
+                this.fetchCloudList(); // 更新目錄，將讓名稱去掉[已封存]
+            } catch (error) {
+                this.syncSuccess = false;
+                this.syncMessage = '解開封存失敗：' + (error.message || error);
             } finally {
                 this.isSyncing = false;
             }
@@ -651,7 +728,6 @@ methods: {
                 this.isSyncing = false;
             }
        }
-    }
-});
+    }});
 
 window.vueAppInstance = appInstance.mount('#app');
