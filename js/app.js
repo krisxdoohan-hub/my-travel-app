@@ -57,6 +57,10 @@ const appInstance = createApp({
             keepTemplates: true,
             cloudTrips: [],
             selectedCloudTrip: '',
+            
+            archivedTrips: [],
+            selectedArchivedTrip: '',
+            showUnarchiveSelector: false,
 
             infoStation: {
                 '資訊整理': [],
@@ -156,9 +160,16 @@ const appInstance = createApp({
 methods: {
         async sysLogAction(actionName, details = '') {
             if (!this.gasUrl) return; 
-            // 嘗試多種可能的 key 來獲取帳號，並優先使用權限表中的姓名，以判定真實身分
-            const storedUser = localStorage.getItem('currentUser') || localStorage.getItem('account') || localStorage.getItem('fb-account') || 'guest';
-            const userName = (this.userPermissions && this.userPermissions.name) ? this.userPermissions.name : storedUser;
+            // 嘗試多種可能的 key 來獲取帳號，並加入管理者判斷
+            const storedUser = localStorage.getItem('currentUser') || localStorage.getItem('account') || localStorage.getItem('fb-account') || (this.isTravelGuest ? '一般訪客' : '管理者');
+            let userName = (this.userPermissions && this.userPermissions.name) ? this.userPermissions.name : storedUser;
+            
+            // 系統強制修正：確保留有管理權限(解鎖)的當下操作不被記錄為 guest
+            if (!this.isTravelGuest && (userName === 'guest' || userName === '一般訪客')) {
+                userName = '管理者';
+            } else if (this.isTravelGuest && userName === 'guest') {
+                userName = '一般訪客';
+            }
             
             const projectName = this.tripTitle || '未命名專案';
             try {
@@ -651,34 +662,78 @@ methods: {
                 this.isSyncing = false;
             }
         },
-        // 解封當前行程
-        async unarchiveCurrentTrip() {
+        // 觸發解封機制：自動判斷數量並顯示對應選單
+        async handleUnarchive() {
             if (!this.gasUrl.trim()) {
                 this.gasUrlError = true;
                 return;
             }
-            if (!confirm(`確定要將「${this.tripTitle}」解開封存嗎？`)) return;
+            this.isSyncing = true;
+            this.syncMessage = '正在讀取雲端封存清單...';
+            try {
+                const currentUser = localStorage.getItem('currentUser') || 'guest';
+                const list = await API.fetchCloudList(this.gasUrl, currentUser);
+                
+                // 過濾出所有已封存的專案
+                this.archivedTrips = list.filter(item => item.name.startsWith('[已封存]')).map(item => item.name);
+                
+                if (this.archivedTrips.length === 0) {
+                    this.syncSuccess = false;
+                    this.syncMessage = '目前無任何已封存的行程。';
+                    this.showUnarchiveSelector = false;
+                } else if (this.archivedTrips.length === 1) {
+                    // 若只有1個封存行程，直接執行解封
+                    await this.executeUnarchive(this.archivedTrips[0]);
+                } else {
+                    // 若有2個以上封存行程，顯示下拉選單讓使用者選擇
+                    this.showUnarchiveSelector = true;
+                    this.selectedArchivedTrip = this.archivedTrips[0]; 
+                    this.syncSuccess = true;
+                    this.syncMessage = '請從下方選單選擇要解封的行程。';
+                }
+            } catch (error) {
+                this.syncSuccess = false;
+                this.syncMessage = '讀取封存清單失敗：' + error.message;
+            } finally {
+                this.isSyncing = false;
+            }
+        },
+        
+        // 實際執行解封操作
+        async executeUnarchive(projectName) {
+            if (!this.gasUrl.trim()) {
+                this.gasUrlError = true;
+                return;
+            }
+            if (!confirm(`確定要將「${projectName}」解開封存嗎？`)) return;
             
             this.isSyncing = true;
-            this.syncMessage = '正在解開封存雲端行程...';
+            this.syncMessage = `正在解開封存「${projectName}」...`;
             try {
                 if (window.API && typeof API.unarchiveToCloud === 'function') {
-                    await API.unarchiveToCloud(this.gasUrl, this.tripTitle);
+                    await API.unarchiveToCloud(this.gasUrl, projectName);
                 } else {
                     await fetch(this.gasUrl, {
                         method: 'POST',
                         body: JSON.stringify({
                             action: 'unarchiveProject',
-                            projectName: this.tripTitle
+                            projectName: projectName
                         })
                     });
                 }
-                this.sysLogAction('解開封存專案', { projectName: this.tripTitle });
-                this.tripTitle = this.tripTitle.replace(/^\[已封存\]\s*/, ''); // 移除前綴
-                this.saveToLocal();
+                this.sysLogAction('解開封存專案', { projectName: projectName });
+
+                // 若剛好是當前載入的專案，同步更新標題並除舊佈新
+                if (this.tripTitle === projectName) {
+                    this.tripTitle = this.tripTitle.replace(/^\[已封存\]\s*/, '');
+                    this.saveToLocal();
+                }
+                
                 this.syncSuccess = true;
                 this.syncMessage = '雲端行程解開封存成功！';
-                this.fetchCloudList();
+                this.showUnarchiveSelector = false; // 完成後隱藏專屬選單
+                this.selectedArchivedTrip = '';
+                this.fetchCloudList(); // 更新主要下載目錄的清單狀態
             } catch (error) {
                 this.syncSuccess = false;
                 this.syncMessage = '解開封存失敗：' + (error.message || error);
