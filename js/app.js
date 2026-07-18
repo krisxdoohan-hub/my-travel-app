@@ -156,19 +156,22 @@ const appInstance = createApp({
 methods: {
         async sysLogAction(actionName, details = '') {
             if (!this.gasUrl) return; 
-            const currentUser = localStorage.getItem('currentUser') || 'guest';
+            // 嘗試多種可能的 key 來獲取帳號，並優先使用權限表中的姓名，以判定真實身分
+            const storedUser = localStorage.getItem('currentUser') || localStorage.getItem('account') || localStorage.getItem('fb-account') || 'guest';
+            const userName = (this.userPermissions && this.userPermissions.name) ? this.userPermissions.name : storedUser;
+            
             const projectName = this.tripTitle || '未命名專案';
             try {
                 // 若 API.logHistory 已集中註冊則使用 API 物件，否則相容原生 fetch
                 if (window.API && typeof API.logHistory === 'function') {
-                    await API.logHistory(this.gasUrl, currentUser, projectName, actionName, details);
+                    await API.logHistory(this.gasUrl, userName, projectName, actionName, details);
                 } else {
                     await fetch(this.gasUrl, {
                         method: 'POST',
                         body: JSON.stringify({
                             action: 'logAction', 
                             actionName: actionName, 
-                            user: currentUser,
+                            user: userName,
                             projectName: projectName,
                             details: details
                         })
@@ -178,6 +181,7 @@ methods: {
                 console.warn('歷史軌跡寫入失敗:', error);
             }
         },
+
         checkPermission(action) {
             if (this.isSuperAdmin) return true;
             
@@ -203,6 +207,7 @@ methods: {
 
         handleTabChange(tabName) {
             this.currentTab = tabName;
+            this.sysLogAction('切換頁籤', { tab: tabName });
             if (tabName.startsWith('day-')) {
                 if (this.dayViewMode === 'map') {
                     this.initMap();
@@ -216,6 +221,7 @@ methods: {
 
         handleViewMode(mode) {
             this.dayViewMode = mode;
+            this.sysLogAction('切換視圖', { mode: mode });
             if (mode === 'map') {
                 this.initMap();
             } else {
@@ -385,6 +391,7 @@ methods: {
         openExternalNav(idx) {
             const currentLoc = this.currentItinerary[idx].location;
             if (!currentLoc) return;
+            this.sysLogAction('開啟外部導航', { location: currentLoc });
             let url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(currentLoc)}`;
             if (idx > 0) {
                 const prevLoc = this.currentItinerary[idx - 1].location;
@@ -419,6 +426,7 @@ methods: {
             );
         },
         triggerGeolocation() {
+            this.sysLogAction('顯示當前定位');
             const mapInst = MapManager.mapInstance;
             if (!mapInst || typeof google === 'undefined') return;
             if (navigator.geolocation) {
@@ -443,6 +451,7 @@ methods: {
         async fetchWeatherForItem(item) {
             const loc = item.location;
             if (!loc) return;
+            this.sysLogAction('查詢天氣', { location: loc });
             this.weatherCache = { ...this.weatherCache, [loc]: { loading: true } };
             const result = await WeatherManager.fetchWeather(loc, item);
             this.weatherCache = { ...this.weatherCache, [loc]: result };
@@ -450,6 +459,7 @@ methods: {
         async fetchAllWeather() {
             const items = this.currentItinerary;
             if (!items || items.length === 0) return;
+            this.sysLogAction('一鍵更新今日天氣');
             for (let i = 0; i < items.length; i++) {
                 if (i > 0) await new Promise(r => setTimeout(r, 1200));
                 await this.fetchWeatherForItem(items[i]);
@@ -465,7 +475,8 @@ methods: {
         },
         restoreData(jsonStr, silent = false) {
             try {
-                const data = JSON.parse(jsonStr);
+                // 修復從 API 取得物件格式時解析報錯問題
+                const data = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
                 if (data.tripTitle !== undefined) this.tripTitle = data.tripTitle;
                 if (data.linkTripId !== undefined) this.linkTripId = data.linkTripId;
                 if (data.days) this.days = data.days;
@@ -554,6 +565,7 @@ methods: {
             const reader = new FileReader();
             reader.onload = (e) => {
                 this.restoreData(e.target.result);
+                this.sysLogAction('匯入 JSON', { fileName: file.name });
                 event.target.value = ''; 
             };
             reader.readAsText(file);
@@ -627,6 +639,8 @@ methods: {
             try {
                 await API.archiveToCloud(this.gasUrl, this.tripTitle);
                 this.sysLogAction('封存專案', { projectName: this.tripTitle });
+                this.tripTitle = '[已封存]' + this.tripTitle; // 同步更新當前專案名稱
+                this.saveToLocal(); // 觸發本地存檔
                 this.syncSuccess = true;
                 this.syncMessage = '雲端行程封存成功！';
                 this.fetchCloudList(); // 重新讀取目錄以更新下拉選單
@@ -637,7 +651,42 @@ methods: {
                 this.isSyncing = false;
             }
         },
-        // 新增解開封存函式
+        // 解封當前行程
+        async unarchiveCurrentTrip() {
+            if (!this.gasUrl.trim()) {
+                this.gasUrlError = true;
+                return;
+            }
+            if (!confirm(`確定要將「${this.tripTitle}」解開封存嗎？`)) return;
+            
+            this.isSyncing = true;
+            this.syncMessage = '正在解開封存雲端行程...';
+            try {
+                if (window.API && typeof API.unarchiveToCloud === 'function') {
+                    await API.unarchiveToCloud(this.gasUrl, this.tripTitle);
+                } else {
+                    await fetch(this.gasUrl, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            action: 'unarchiveProject',
+                            projectName: this.tripTitle
+                        })
+                    });
+                }
+                this.sysLogAction('解開封存專案', { projectName: this.tripTitle });
+                this.tripTitle = this.tripTitle.replace(/^\[已封存\]\s*/, ''); // 移除前綴
+                this.saveToLocal();
+                this.syncSuccess = true;
+                this.syncMessage = '雲端行程解開封存成功！';
+                this.fetchCloudList();
+            } catch (error) {
+                this.syncSuccess = false;
+                this.syncMessage = '解開封存失敗：' + (error.message || error);
+            } finally {
+                this.isSyncing = false;
+            }
+        },
+        // 解封選單中選取的行程
         async unarchiveToCloud() {
             if (!this.gasUrl.trim()) {
                 this.gasUrlError = true;
@@ -667,8 +716,16 @@ methods: {
                 }
                 
                 this.sysLogAction('解開封存專案', { projectName: this.selectedCloudTrip });
+
+                // 若當前載入的剛好是被解封的，同步更新畫面名稱
+                if (this.tripTitle === this.selectedCloudTrip) {
+                    this.tripTitle = this.tripTitle.replace(/^\[已封存\]\s*/, '');
+                    this.saveToLocal();
+                }
+
                 this.syncSuccess = true;
                 this.syncMessage = '雲端行程解開封存成功！';
+                this.selectedCloudTrip = ''; // 解封後清空選擇
                 this.fetchCloudList(); // 更新目錄，將讓名稱去掉[已封存]
             } catch (error) {
                 this.syncSuccess = false;
@@ -684,6 +741,7 @@ methods: {
             }
             this.isSyncing = true;
             this.syncMessage = '正在讀取雲端行程目錄...';
+            this.sysLogAction('讀取雲端行程目錄');
             try {
                 // 取得當前登入者帳號，若無則預設為 guest
                 const currentUser = localStorage.getItem('currentUser') || 'guest';
@@ -708,6 +766,7 @@ methods: {
             if (!this.selectedCloudTrip || !this.gasUrl) return;
             this.isSyncing = true;
             this.syncMessage = `正在下載「${this.selectedCloudTrip}」...`;
+            this.sysLogAction('下載雲端行程', { projectName: this.selectedCloudTrip });
             
             const actualSheetName = this.selectedCloudTrip.replace(/^\[已封存\]\s*/, '');
             
