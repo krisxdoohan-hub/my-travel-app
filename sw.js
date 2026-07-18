@@ -1,4 +1,4 @@
-const CACHE_NAME = 'travel-pwa-cache-v0.0.0.0.4';
+const CACHE_NAME = 'travel-pwa-cache-v0.0.0.0.5';
 const urlsToCache = [
   './',
   './index.html',
