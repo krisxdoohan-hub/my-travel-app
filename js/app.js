@@ -459,21 +459,51 @@ methods: {
         },
                 async copySyncCode() {
             try {
-                // 修改：僅複製雲端目錄網址(GAS網頁連結)
-                const codeToCopy = this.gasUrl ? this.gasUrl : '尚未設定 GAS 網頁連結';
-                await navigator.clipboard.writeText(codeToCopy);
-                alert('已複製雲端目錄網址 (GAS網頁連結)！您可至其他裝置貼上此連結。');
+                if (!this.gasUrl) {
+                    alert('尚未設定 GAS 網頁連結，無法複製代碼。');
+                    return;
+                }
+                
+                // 修改：將 GAS 網址進行 Base64 加密與混淆，並加上專屬識別前綴
+                const encryptedCode = 'SYNC::' + btoa(encodeURIComponent(this.gasUrl));
+                await navigator.clipboard.writeText(encryptedCode);
+                alert('已複製加密同步代碼！您可至其他裝置貼上此代碼。');
             } catch (e) {
                 alert('瀏覽器不支援自動複製，請改用手動複製。');
             }
         },
         async pasteSyncCode() {
+            // 新增：處理貼上文字的判斷邏輯，區分是「加密網址代碼」還是「完整 JSON 備份」
+            const processPastedText = (text) => {
+                if (!text) return;
+                
+                if (text.startsWith('SYNC::')) {
+                    // 若為加密代碼，則進行解密並套用 GAS 網址
+                    try {
+                        const decodedUrl = decodeURIComponent(atob(text.replace('SYNC::', '')));
+                        this.gasUrl = decodedUrl;
+                        this.saveToLocal();
+                        alert('同步代碼解析成功！GAS 網址已更新。');
+                    } catch (err) {
+                        alert('無效的同步代碼，解析失敗。');
+                    }
+                } else {
+                    // 若非加密代碼，則視為原本的 JSON 格式，交給 restoreData 處理
+                    this.restoreData(text);
+                }
+            };
+
             try {
                 const text = await navigator.clipboard.readText();
-                if(text) this.restoreData(text);
+                if (text) {
+                    processPastedText(text);
+                }
             } catch (e) {
-                const manualText = prompt('請手 শারীরিক上貼上行程代碼：');
-                if(manualText) this.restoreData(manualText);
+                // 修正了原本的錯字「手 शारीरिक上」為「手動」
+                const manualText = prompt('請手動貼上行程代碼：');
+                if (manualText) {
+                    processPastedText(manualText);
+                }
             }
         },
         downloadJSON() {
