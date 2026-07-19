@@ -114,7 +114,7 @@
 
 <div id="app" class="w-full max-w-md bg-[#F4EFE6] h-full flex flex-col relative shadow-2xl overflow-hidden border border-gray-100">
     
-    <header class="bg-morandi-light pt-8 pb-3 px-5 rounded-b-[2.5rem] shadow-sm flex-shrink-0 z-20">
+    <header class="bg-morandi-light pb-3 px-5 rounded-b-[2.5rem] shadow-sm flex-shrink-0 z-20" style="padding-top: calc(2rem + env(safe-area-inset-top, 0px));">
         <div class="flex justify-between items-center mb-4">
             <div class="flex-1 mr-4">
                 <input v-if="isEditingTitle" v-model.trim="tripTitle" @blur="isEditingTitle = false" @keyup.enter="isEditingTitle = false" ref="titleInput"
@@ -177,7 +177,7 @@
         </div>
     </header>
 
-    <main class="flex-1 overflow-y-auto hide-scrollbar p-4 bg-[#F4EFE6]" style="padding-bottom: calc(5rem + env(safe-area-inset-bottom));">
+    <main class="flex-1 overflow-y-auto hide-scrollbar p-4 pb-20 bg-[#F4EFE6]">
         
         <div v-if="currentTab === 'todo'" class="space-y-4">
             <div class="flex items-center justify-between border-b border-gray-100 pb-2">
@@ -371,7 +371,7 @@
 
     </main>
 
-    <nav class="absolute bottom-0 w-full bg-[#FAF6EB] border-t border-gray-200 flex justify-around pt-2 z-30 shadow-lg" style="padding-bottom: max(1rem, env(safe-area-inset-bottom));">
+    <nav class="absolute bottom-0 w-full bg-[#FAF6EB] border-t border-gray-200 flex justify-around pt-2 pb-4 z-30 shadow-lg">
         <button @click="handleTabChange(days.length > 0 ? 'day-0' : 'todo')" class="flex flex-col items-center btn-icon" :class="currentTab.startsWith('day-') ? 'text-morandi-dark font-semibold' : 'text-text-sub'">
             <i class="fa-solid fa-calendar-alt text-base mb-0.5"></i>
             <span class="text-[10px]">日常行程</span>
