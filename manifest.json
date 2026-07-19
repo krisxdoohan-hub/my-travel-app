@@ -1,24 +1,37 @@
 {
-  "name": "日系極簡隨身旅遊App",
+  "name": "日系極簡隨身旅遊",
   "short_name": "隨身旅遊",
   "description": "單一入口、多專案管理的日系旅遊管理系統",
-  "start_url": "./index.html",
+  "start_url": ".",
+  "id": ".",
   "display": "standalone",
   "background_color": "#F4EFE6",
   "theme_color": "#7A9A74",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "./icon-192x192.png",
+      "src": "./icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "./icon-512x512.png",
+      "src": "./icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
