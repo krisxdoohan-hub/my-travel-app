@@ -1,4 +1,4 @@
-const CACHE_NAME = 'travel-pwa-cache-v0.0.0.0.6';
+const CACHE_NAME = 'travel-pwa-cache-v0.0.0.0.7';
 const urlsToCache = [
   './',
   './index.html',
@@ -53,7 +53,17 @@ self.addEventListener('fetch', event => {
 
     event.respondWith(
         fetch(event.request).catch(() => {
-            return caches.match(event.request);
+            return caches.match(event.request).then(response => {
+                // 若在快取中找到完全符合的資源，直接回傳
+                if (response) {
+                    return response;
+                }
+                // 【核心修正】：若離線且為導航請求 (網頁切換/重整)，強制回傳 index.html 確保 PWA 離線檢查通過
+                if (event.request.mode === 'navigate') {
+                    return caches.match('./index.html');
+                }
+                return undefined;
+            });
         })
     );
 });
