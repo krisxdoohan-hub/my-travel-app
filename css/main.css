@@ -1,26 +1,37 @@
 @charset "UTF-8";
 
-/* ============================================================
-   RWD 修正 (v4 - 對齊已驗證可行的參考檔寫法)
-   不再跟 iOS 對抗：不用 vh/dvh/svh、不用 safe-area env()、
-   不用 viewport-fit=cover、不鎖 overflow:hidden。
-   讓瀏覽器用原生方式自己算高度，跟參考檔一致。
-   ============================================================ */
-
-body {
-    overscroll-behavior-y: none; /* 只擋垂直橡皮筋回彈，跟參考檔一致 */
+/* 修復手機瀏覽器高度遮擋問題：確保基礎 html/body 滿版避免滑動破圖 */
+html, body {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
 }
 
 .app-container {
-    min-height: 100vh; /* 用 min-height，內容多就自然往下延伸捲動，不強制鎖死一屏 */
+    height: 100vh; /* Fallback for older browsers */
+    height: 100dvh;
+    width: 100vw;
 }
 
+/* 針對 iOS 瀏海與動態島的安全距離修正 (主畫面 Header) */
+header {
+    /* 保留原本 pt-8 (2rem) 的設計，並疊加 iOS 頂部安全距離 */
+    padding-top: calc(2rem + env(safe-area-inset-top, 0px)) !important;
+}
+
+/* 針對 iOS 底部指示條的安全距離修正 (主畫面 Nav) */
 nav {
-    padding-bottom: 1rem;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px)) !important;
 }
 
-input, textarea, select {
-    font-size: 16px !important; /* 保留：避免 iOS 輸入框字體過小觸發強制縮放 */
+/* 修復登入畫面與 Loading 的 iOS 底部白邊問題與頂部安全距離 */
+#lock-screen, #loading-overlay {
+    height: 100vh !important; /* Fallback */
+    height: 100dvh !important;
+    width: 100vw !important;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 body { 
