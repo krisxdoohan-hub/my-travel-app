@@ -1,22 +1,26 @@
 @charset "UTF-8";
 
-/* 修復手機瀏覽器高度遮擋問題：確保基礎 html/body 滿版避免滑動破圖 */
-html, body {
+/* 修復手機瀏覽器高度遮擋問題：放棄 dvh，改用 fixed 與 top/bottom 絕對定位填滿 */
+html {
     height: 100%;
     width: 100%;
-    margin: 0;
-    padding: 0;
+    background-color: #F4EFE6; /* 確保最底層顏色一致，避免任何白邊破圖 */
 }
 
 .app-container {
-    height: 100vh; /* Fallback for older browsers */
-    height: 100dvh;
-    width: 100vw;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    /* 移除所有 height 限制，讓 top:0 和 bottom:0 強制撐滿整個物理螢幕 */
 }
 
 /* 針對 iOS 瀏海與動態島的安全距離修正 (主畫面 Header) */
 header {
-    /* 保留原本 pt-8 (2rem) 的設計，並疊加 iOS 頂部安全距離 */
     padding-top: calc(2rem + env(safe-area-inset-top, 0px)) !important;
 }
 
@@ -25,13 +29,11 @@ nav {
     padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px)) !important;
 }
 
-/* 修復登入畫面與 Loading 的 iOS 底部白邊問題與頂部安全距離 */
+/* 移除錯誤的 100dvh 限制，利用 HTML 原本的 fixed inset-0 自然滿版，
+   保留原本 p-6 (1.5rem) 的間距，疊加 padding 確保內容不被 iOS 擋住 */
 #lock-screen, #loading-overlay {
-    height: 100vh !important; /* Fallback */
-    height: 100dvh !important;
-    width: 100vw !important;
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-top: calc(1.5rem + env(safe-area-inset-top, 0px)) !important;
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)) !important;
 }
 
 body { 
