@@ -63,10 +63,10 @@
         }
     </style>
 
-    <!-- 純 CSS 樣式則維持外部引入，完全由它接管安全區域 -->
+    <!-- 純 CSS 樣式則維持外部引入 -->
     <link rel="stylesheet" href="./css/main.css">
 </head>
-<body class="flex justify-center items-center w-screen overflow-hidden leading-relaxed app-container">
+<body class="flex justify-center items-center h-[100dvh] w-screen overflow-hidden leading-relaxed app-container bg-[#F4EFE6]">
 
     <div id="loading-overlay" class="fixed inset-0 bg-black/60 z-[99999] hidden flex-col justify-center items-center text-white backdrop-blur-sm">
         <i class="fa-solid fa-spinner fa-spin text-4xl mb-4 text-morandi-light"></i>
@@ -99,7 +99,7 @@
         </div>
     </div>
 
-<div id="app" class="w-full md:max-w-4xl lg:max-w-6xl mx-auto bg-[#F4EFE6] h-full flex flex-col relative shadow-2xl overflow-hidden border border-gray-100 transition-all duration-300">
+<div id="app" class="w-full max-w-md bg-[#F4EFE6] h-full flex flex-col relative shadow-2xl overflow-hidden border border-gray-100">
     
     <header class="bg-morandi-light pt-8 pb-3 px-5 rounded-b-[2.5rem] shadow-sm flex-shrink-0 z-20">
         <div class="flex justify-between items-center mb-4">
@@ -164,7 +164,7 @@
         </div>
     </header>
 
-    <main class="flex-1 overflow-y-auto hide-scrollbar p-4 pb-20 bg-[#F4EFE6]">
+    <main class="flex-1 overflow-y-auto hide-scrollbar p-4 bg-[#F4EFE6]" style="padding-bottom: calc(5rem + env(safe-area-inset-bottom));">
         
         <div v-if="currentTab === 'todo'" class="space-y-4">
             <div class="flex items-center justify-between border-b border-gray-100 pb-2">
@@ -185,9 +185,9 @@
                 <span v-if="todoError" class="text-red-500 text-xs px-2">請輸入待辦事項內容</span>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
+            <div class="space-y-2 mt-2">
                 <div v-for="(todo, idx) in todos" :key="idx" 
-                     class="card-container flex items-center justify-between h-full"
+                     class="card-container flex items-center justify-between"
                      :class="{'opacity-60 bg-[#F4EFE6]': todo.done}">
                     <label class="flex items-center space-x-4 cursor-pointer flex-1">
                         <input type="checkbox" v-model="todo.done" class="w-4 h-4 rounded text-morandi focus:ring-morandi border-gray-300">
@@ -197,7 +197,7 @@
                         <i class="fa-solid fa-trash-can text-xs"></i>
                     </button>
                 </div>
-                <p v-if="todos.length === 0" class="text-center text-xs text-text-sub py-8 md:col-span-full">暫無待辦事項，動手新增一個吧！</p>
+                <p v-if="todos.length === 0" class="text-center text-xs text-text-sub py-8">暫無待辦事項，動手新增一個吧！</p>
             </div>
         </div>
 
@@ -231,9 +231,9 @@
                 </button>
             </div>
 
-            <div v-if="dayViewMode === 'list'" class="space-y-4 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4" ref="itineraryList">
+            <div v-if="dayViewMode === 'list'" class="space-y-4" ref="itineraryList">
                 <div v-for="(item, idx) in currentItinerary" :key="item.id || idx" 
-                     class="itinerary-item card-container relative flex flex-col h-full"
+                     class="itinerary-item card-container relative flex flex-col"
                      :class="{'bg-[#F4EFE6] border-dashed opacity-70': item.completed}">
                     
                     <div class="flex items-start justify-between">
@@ -249,7 +249,7 @@
                         </div>
                     </div>
 
-                    <div class="mt-2 pl-8 flex-1">
+                    <div class="mt-2 pl-8">
                         <h3 class="text-base font-bold text-text-main flex items-center flex-wrap gap-2" :class="{'line-through text-text-sub': item.completed}">
                             {{ item.location }}
                             <template v-if="!isTravelGuest">
@@ -283,13 +283,13 @@
                     </div>
                 </div>
 
-                <p v-if="currentItinerary.length === 0" class="text-center text-xs text-text-sub py-8 md:col-span-full">這天還沒有安排行程，點擊下方新增吧！</p>
+                <p v-if="currentItinerary.length === 0" class="text-center text-xs text-text-sub py-8">這天還沒有安排行程，點擊下方新增吧！</p>
 
-                <button v-if="checkPermission('canManageItinerary')" @click="openAddModal" class="w-full py-4 border-2 border-dashed rounded-2xl text-sm font-medium active:scale-95 transition-transform flex items-center justify-center space-x-2 hover:opacity-80 md:col-span-full"
+                <button v-if="checkPermission('canManageItinerary')" @click="openAddModal" class="w-full py-4 border-2 border-dashed rounded-2xl text-sm font-medium active:scale-95 transition-transform flex items-center justify-center space-x-2 hover:opacity-80"
                         :style="{ borderColor: currentThemeColor, color: currentThemeColor, backgroundColor: '#FAF6EB' }">
                     <i class="fa-solid fa-plus-circle"></i> <span>新增行程目的地</span>
                 </button>
-                <button @click="fetchAllWeather" v-if="currentItinerary.length > 0 && !isTravelGuest" class="btn-secondary w-full py-4 text-xs md:col-span-full">
+                <button @click="fetchAllWeather" v-if="currentItinerary.length > 0 && !isTravelGuest" class="btn-secondary w-full py-4 text-xs">
                     <i class="fa-solid fa-cloud-sun mr-2"></i> <span>一鍵更新今日所有景點天氣</span>
                 </button>
             </div>
@@ -303,7 +303,7 @@
                     <p>自動轉換並定位今日景點 (需確認已掛載正確的 API Key)。</p>
                 </div>
                 
-                <div class="w-full h-80 md:h-[500px] lg:h-[600px] rounded-2xl border border-gray-200 shadow-inner overflow-hidden relative">
+                <div class="w-full h-80 rounded-2xl border border-gray-200 shadow-inner overflow-hidden relative">
                     <div id="map-canvas" class="w-full h-full bg-[#F4EFE6]"></div>
                     
                     <div v-if="isMapLoading" class="absolute inset-0 bg-[#FAF6EB]/80 z-[20] flex flex-col items-center justify-center">
@@ -333,23 +333,21 @@
                 </button>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-                <div v-for="(cat, catName) in infoStation" :key="catName" class="card-container space-y-4 h-fit">
-                    <h3 class="text-sm font-bold text-morandi-deep flex items-center border-b border-gray-100 pb-2">
-                        <i :class="getInfoCatIcon(catName)" class="mr-2 opacity-80"></i>{{ catName }}
-                    </h3>
-                    <div class="space-y-2">
-                        <div v-for="(info, iIdx) in cat" :key="iIdx" class="bg-[#F4EFE6] p-4 rounded-xl relative group">
-                            <div class="flex justify-between items-start">
-                                <h4 class="text-xs font-bold text-text-main">{{ info.title }}</h4>
-                                <button v-if="checkPermission('canManageInfo')" @click="deleteInfoItem(catName, iIdx)" class="btn-icon text-gray-300 hover:text-red-400 text-xs">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </div>
-                            <p class="text-xs text-text-sub mt-2 whitespace-pre-wrap">{{ info.content }}</p>
+            <div v-for="(cat, catName) in infoStation" :key="catName" class="card-container space-y-4">
+                <h3 class="text-sm font-bold text-morandi-deep flex items-center border-b border-gray-100 pb-2">
+                    <i :class="getInfoCatIcon(catName)" class="mr-2 opacity-80"></i>{{ catName }}
+                </h3>
+                <div class="space-y-2">
+                    <div v-for="(info, iIdx) in cat" :key="iIdx" class="bg-[#F4EFE6] p-4 rounded-xl relative group">
+                        <div class="flex justify-between items-start">
+                            <h4 class="text-xs font-bold text-text-main">{{ info.title }}</h4>
+                            <button v-if="checkPermission('canManageInfo')" @click="deleteInfoItem(catName, iIdx)" class="btn-icon text-gray-300 hover:text-red-400 text-xs">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
                         </div>
-                        <p v-if="cat.length === 0" class="text-xs text-text-sub text-center py-4 opacity-60">暫無內容</p>
+                        <p class="text-xs text-text-sub mt-2 whitespace-pre-wrap">{{ info.content }}</p>
                     </div>
+                    <p v-if="cat.length === 0" class="text-xs text-text-sub text-center py-4 opacity-60">暫無內容</p>
                 </div>
             </div>
             
@@ -360,7 +358,7 @@
 
     </main>
 
-    <nav class="absolute bottom-0 w-full bg-[#FAF6EB] border-t border-gray-200 flex justify-around md:justify-center md:gap-20 pt-2 pb-4 z-30 shadow-lg md:rounded-t-3xl">
+    <nav class="absolute bottom-0 w-full bg-[#FAF6EB] border-t border-gray-200 flex justify-around pt-2 z-30 shadow-lg" style="padding-bottom: max(1rem, env(safe-area-inset-bottom));">
         <button @click="handleTabChange(days.length > 0 ? 'day-0' : 'todo')" class="flex flex-col items-center btn-icon" :class="currentTab.startsWith('day-') ? 'text-morandi-dark font-semibold' : 'text-text-sub'">
             <i class="fa-solid fa-calendar-alt text-base mb-0.5"></i>
             <span class="text-[10px]">日常行程</span>
@@ -371,8 +369,8 @@
         </button>
     </nav>
 
-    <div v-if="showShoppingModal" class="absolute inset-0 bg-black/40 z-[9999] flex items-start md:items-center justify-center pt-[10vh] md:pt-0 p-4 transition-all">
-        <div class="bg-[#FAF6EB] w-full max-w-sm md:max-w-md lg:max-w-lg rounded-3xl max-h-[80vh] flex flex-col p-6 shadow-2xl">
+    <div v-if="showShoppingModal" class="absolute inset-0 bg-black/40 z-[9999] flex items-start justify-center pt-[10vh] p-4 transition-all">
+        <div class="bg-[#FAF6EB] w-full max-w-sm rounded-3xl max-h-[80vh] flex flex-col p-6 shadow-2xl">
             <div class="flex justify-between items-center border-b border-gray-200 pb-4">
                 <h3 class="font-bold text-text-main flex items-center text-base">
                     <i class="fa-solid fa-basket-shopping text-morandi-dark mr-2"></i>代買購物清單
@@ -385,7 +383,7 @@
                 <button @click="addShoppingItem" class="btn-primary text-xs">新增</button>
             </div>
 
-            <div class="flex-1 overflow-y-auto hide-scrollbar mt-4 grid grid-cols-1 md:grid-cols-2 gap-2 h-fit items-start content-start">
+            <div class="flex-1 overflow-y-auto hide-scrollbar mt-4 space-y-2">
                 <div v-for="(shop, sIdx) in shoppingList" :key="sIdx" class="flex items-center justify-between p-4 bg-[#F4EFE6] rounded-xl" :class="{'opacity-50': shop.bought}">
                     <label class="flex items-center space-x-4 cursor-pointer flex-1">
                         <input type="checkbox" v-model="shop.bought" class="w-4 h-4 rounded text-morandi focus:ring-morandi border-gray-300">
@@ -395,13 +393,13 @@
                       <i class="fa-solid fa-trash-can text-xs"></i>
                     </button>
                 </div>
-                <p v-if="shoppingList.length === 0" class="text-center text-xs text-text-sub py-8 md:col-span-full">購物清單空空如也</p>
+                <p v-if="shoppingList.length === 0" class="text-center text-xs text-text-sub py-8">購物清單空空如也</p>
             </div>
         </div>
     </div>
 
     <div v-if="showItineraryModal" class="absolute inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4">
-        <div class="bg-[#FAF6EB] w-full max-w-sm md:max-w-md lg:max-w-lg rounded-3xl p-6 space-y-4 shadow-xl">
+        <div class="bg-[#FAF6EB] w-full max-w-sm rounded-3xl p-6 space-y-4 shadow-xl">
             <h3 class="font-bold text-text-main text-base">{{ modalMode === 'add' ? '新增行程目的地' : '編輯行程目的地' }}</h3>
             <div class="space-y-4 text-xs">
                 <div>
@@ -434,7 +432,7 @@
     </div>
 
     <div v-if="showInfoModal" class="absolute inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4">
-        <div class="bg-[#FAF6EB] w-full max-w-sm md:max-w-md lg:max-w-lg rounded-3xl p-6 space-y-4 shadow-xl">
+        <div class="bg-[#FAF6EB] w-full max-w-sm rounded-3xl p-6 space-y-4 shadow-xl">
             <h3 class="font-bold text-text-main text-base">新增隨身站資訊</h3>
             <div class="space-y-4 text-xs">
                 <div>
@@ -462,7 +460,7 @@
     </div>
 
     <div v-if="showSyncModal" class="absolute inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4">
-        <div class="bg-[#FAF6EB] w-full max-w-sm md:max-w-md lg:max-w-2xl rounded-3xl p-6 space-y-4 shadow-xl max-h-[90%] overflow-y-auto">
+        <div class="bg-[#FAF6EB] w-full max-w-sm rounded-3xl p-6 space-y-4 shadow-xl max-h-[90%] overflow-y-auto">
             <div class="flex justify-between items-center border-b border-gray-200 pb-2">
                 <h3 class="font-bold text-text-main text-base"><i class="fa-solid fa-cloud mr-2 text-morandi-dark"></i>資料同步與轉移</h3>
                 <button @click="showSyncModal = false" class="btn-icon text-lg hover:text-text-main"><i class="fa-solid fa-xmark"></i></button>
@@ -470,11 +468,11 @@
 
             <div class="space-y-4">
                 <h4 class="text-sm font-bold text-morandi-deep border-b border-gray-100 pb-1">跨裝置本機轉移</h4>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-                    <button @click="copySyncCode" class="btn-secondary px-2 py-3"><i class="fa-regular fa-copy mr-2"></i>複製代碼</button>
-                    <button @click="pasteSyncCode" class="btn-secondary px-2 py-3"><i class="fa-solid fa-paste mr-2"></i>貼上代碼</button>
-                    <button @click="downloadJSON" class="btn-secondary px-2 py-3"><i class="fa-solid fa-download mr-2"></i>匯出 JSON</button>
-                    <label class="btn-secondary px-2 py-3 cursor-pointer m-0 text-center flex items-center justify-center">
+                <div class="grid grid-cols-2 gap-4 text-xs">
+                    <button @click="copySyncCode" class="btn-secondary px-2"><i class="fa-regular fa-copy mr-2"></i>複製代碼</button>
+                    <button @click="pasteSyncCode" class="btn-secondary px-2"><i class="fa-solid fa-paste mr-2"></i>貼上代碼</button>
+                    <button @click="downloadJSON" class="btn-secondary px-2"><i class="fa-solid fa-download mr-2"></i>匯出 JSON</button>
+                    <label class="btn-secondary px-2 cursor-pointer m-0 text-center flex items-center justify-center">
                         <i class="fa-solid fa-file-import mr-2"></i>匯入 JSON
                         <input type="file" accept=".json" class="hidden" @change="uploadJSON">
                     </label>
@@ -483,12 +481,12 @@
 
             <div class="space-y-4 mt-4">
                 <h4 class="text-sm font-bold text-morandi-deep border-b border-gray-100 pb-1">一鍵建立新行程</h4>
-                <div class="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-4 mb-2">
-                    <label class="flex items-center space-x-2 cursor-pointer text-text-main text-xs bg-[#F4EFE6] p-3 rounded-xl border border-gray-200 flex-1">
+                <div class="flex flex-col space-y-2 mb-2">
+                    <label class="flex items-center space-x-2 cursor-pointer text-text-main text-xs bg-[#F4EFE6] p-2 rounded-xl border border-gray-200">
                         <input type="checkbox" v-model="keepTemplates" class="w-4 h-4 rounded text-morandi focus:ring-morandi border-gray-300">
                         <span>保留當前待辦與購物清單 (智慧樣板)</span>
                     </label>
-                    <button @click="createNewTrip" class="btn-danger md:w-auto px-6 py-3">
+                    <button @click="createNewTrip" class="btn-danger w-full">
                         <i class="fa-solid fa-broom mr-2"></i>清空並建立全新行程
                     </button>
                 </div>
@@ -505,20 +503,20 @@
                     </div>
                 </template>
 
-                <div class="flex flex-wrap gap-2 text-xs">
-                    <button v-if="!isTravelGuest" @click="saveToCloud" :disabled="isSyncing" class="btn-primary flex-1 min-w-[100px]">
+                <div class="flex space-x-2 text-xs">
+                    <button v-if="!isTravelGuest" @click="saveToCloud" :disabled="isSyncing" class="btn-primary flex-1">
                         <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin mr-1"></i>
                         <i v-else class="fa-solid fa-cloud-arrow-up mr-1"></i>備份
                     </button>
-                    <button v-if="!isTravelGuest" @click="archiveToCloud" :disabled="isSyncing || tripTitle.startsWith('[已封存]')" class="btn-secondary flex-1 min-w-[100px] border-red-200 text-red-500 hover:bg-red-50" :class="{'opacity-50 cursor-not-allowed': tripTitle.startsWith('[已封存]')}">
+                    <button v-if="!isTravelGuest" @click="archiveToCloud" :disabled="isSyncing || tripTitle.startsWith('[已封存]')" class="btn-secondary flex-1 border-red-200 text-red-500 hover:bg-red-50" :class="{'opacity-50 cursor-not-allowed': tripTitle.startsWith('[已封存]')}">
                         <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin mr-1"></i>
                         <i v-else class="fa-solid fa-box-archive mr-1"></i>封存
                     </button>
-                    <button v-if="!isTravelGuest" @click="handleUnarchive" :disabled="isSyncing" class="btn-secondary flex-1 min-w-[100px] border-yellow-400 text-yellow-600 hover:bg-yellow-50">
+                    <button v-if="!isTravelGuest" @click="handleUnarchive" :disabled="isSyncing" class="btn-secondary flex-1 border-yellow-400 text-yellow-600 hover:bg-yellow-50">
                         <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin mr-1"></i>
                         <i v-else class="fa-solid fa-box-open mr-1"></i>解開封存
                     </button>
-                    <button @click="fetchCloudList" :disabled="isSyncing" class="btn-secondary min-w-[100px]" :class="isTravelGuest ? 'w-full' : 'flex-1'">
+                    <button @click="fetchCloudList" :disabled="isSyncing" class="btn-secondary" :class="isTravelGuest ? 'w-full' : 'flex-1'">
                         <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin mr-1"></i>
                         <i v-else class="fa-solid fa-sync mr-1"></i>讀取目錄
                     </button>
@@ -544,6 +542,7 @@
                         <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin"></i>
                         <i v-else class="fa-solid fa-download"></i>
                     </button>
+                    <!-- 新增解開封存按鈕，放在下載按鈕旁邊 -->
                     <button v-if="selectedCloudTrip && selectedCloudTrip.startsWith('[已封存]')" @click="unarchiveToCloud" :disabled="isSyncing" class="btn-secondary px-4 border-yellow-300 text-yellow-600 hover:bg-yellow-50">
                         <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin"></i>
                         <i v-else class="fa-solid fa-box-open"></i>
