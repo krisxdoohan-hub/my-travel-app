@@ -516,22 +516,22 @@
                     </div>
                 </template>
 
-                <div class="flex space-x-2 text-xs">
-                    <button v-if="!isTravelGuest" @click="saveToCloud" :disabled="isSyncing" class="btn-primary flex-1">
+                <div class="flex flex-col space-y-2 text-xs">
+                    <button v-if="!isTravelGuest" @click="saveToCloud" :disabled="isSyncing" class="btn-primary w-full">
                         <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin mr-1"></i>
                         <i v-else class="fa-solid fa-cloud-arrow-up mr-1"></i>備份
                     </button>
-                    <button v-if="!isTravelGuest" @click="archiveToCloud" :disabled="isSyncing || tripTitle.startsWith('[已封存]')" class="btn-secondary flex-1 border-red-200 text-red-500 hover:bg-red-50" :class="{'opacity-50 cursor-not-allowed': tripTitle.startsWith('[已封存]')}">
+                    <button @click="fetchCloudList" :disabled="isSyncing" class="btn-secondary w-full">
+                        <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin mr-1"></i>
+                        <i v-else class="fa-solid fa-sync mr-1"></i>讀取目錄
+                    </button>
+                    <button v-if="!isTravelGuest" @click="archiveToCloud" :disabled="isSyncing || tripTitle.startsWith('[已封存]')" class="btn-secondary w-full border-red-200 text-red-500 hover:bg-red-50" :class="{'opacity-50 cursor-not-allowed': tripTitle.startsWith('[已封存]')}">
                         <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin mr-1"></i>
                         <i v-else class="fa-solid fa-box-archive mr-1"></i>封存
                     </button>
-                    <button v-if="!isTravelGuest" @click="handleUnarchive" :disabled="isSyncing" class="btn-secondary flex-1 border-yellow-400 text-yellow-600 hover:bg-yellow-50">
+                    <button v-if="!isTravelGuest" @click="handleUnarchive" :disabled="isSyncing" class="btn-secondary w-full border-yellow-400 text-yellow-600 hover:bg-yellow-50">
                         <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin mr-1"></i>
                         <i v-else class="fa-solid fa-box-open mr-1"></i>解開封存
-                    </button>
-                    <button @click="fetchCloudList" :disabled="isSyncing" class="btn-secondary" :class="isTravelGuest ? 'w-full' : 'flex-1'">
-                        <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin mr-1"></i>
-                        <i v-else class="fa-solid fa-sync mr-1"></i>讀取目錄
                     </button>
                 </div>
 
