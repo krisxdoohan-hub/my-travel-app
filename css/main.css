@@ -1,5 +1,15 @@
 @charset "UTF-8";
 
+/* 修復手機瀏覽器高度遮擋問題：使用 dvh 並設定安全區域 */
+.app-container {
+    height: 100vh; /* Fallback for older browsers */
+    height: 100dvh;
+}
+
+nav {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px)) !important;
+}
+
 body { 
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
     background-color: #F4EFE6;
