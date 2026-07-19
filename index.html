@@ -63,10 +63,23 @@
         }
     </style>
 
-    <!-- 純 CSS 樣式則維持外部引入 -->
-    <link rel="stylesheet" href="./css/main.css">
+    <!-- 核心佈局與樣式，回歸 index.html 以避免 file:// 載入延遲與跨平台高度異常 -->
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+            background-color: #F4EFE6;
+            background-image: radial-gradient(#D4C9B3 1.5px, transparent 1.5px);
+            background-size: 24px 24px;
+            color: #4A4A4A;
+            user-select: none;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+        .gm-style { z-index: 10; font-family: inherit; }
+    </style>
 </head>
-<body class="flex justify-center items-center h-[100dvh] w-screen overflow-hidden leading-relaxed app-container bg-[#F4EFE6]">
+<body class="flex justify-center items-center h-screen w-screen overflow-hidden leading-relaxed">
 
     <div id="loading-overlay" class="fixed inset-0 bg-black/60 z-[99999] hidden flex-col justify-center items-center text-white backdrop-blur-sm">
         <i class="fa-solid fa-spinner fa-spin text-4xl mb-4 text-morandi-light"></i>
