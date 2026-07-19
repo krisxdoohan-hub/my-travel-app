@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#7A9A74">
@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="隨身旅遊">
     <link rel="apple-touch-icon" href="./icon-192x192.png">
 
-    <title>日系極簡隨身旅遊App</title>
+    <title>日系極簡隨身旅遊</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
@@ -20,35 +20,6 @@
     
     <script src="https://maps.googleapis.com/maps/api/js?key=++++++++++++++"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
-    
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
-        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyCMnkg7Ei1kqHZgcSc1jlvhnBCscOlNhkM",
-            authDomain: "my-trip-split-app.firebaseapp.com",
-            projectId: "my-trip-split-app",
-            storageBucket: "my-trip-split-app.firebasestorage.app",
-            messagingSenderId: "348152451240",
-            appId: "1:348152451240:web:93c5d0feb79812f236f29d"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        // 將模組暴露給全域環境，供後續 JavaScript 呼叫
-        window.firebaseAuth = auth;
-        window.firebaseDb = db;
-        window.doc = doc;
-        window.getDoc = getDoc;
-        window.signInWithEmailAndPassword = signInWithEmailAndPassword;
-        window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
-        window.onAuthStateChanged = onAuthStateChanged;
-        window.signOut = signOut;
-    </script>
 
     <script>
         tailwind.config = {
@@ -78,6 +49,8 @@
             }
         }
     </script>
+    
+    <!-- 需要 Tailwind 即時編譯的自訂元件，必須保留在 HTML 內 -->
     <style type="text/tailwindcss">
         @layer components {
             .btn-primary { @apply bg-morandi text-white px-4 py-2 rounded-xl hover:bg-morandi-dark active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center; }
@@ -89,26 +62,11 @@
             .card-container { @apply bg-[#FAF6EB] p-4 rounded-2xl border border-gray-100 shadow-sm transition-all; }
         }
     </style>
-    <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
-            background-color: #F4EFE6;
-            background-image: radial-gradient(#D4C9B3 1.5px, transparent 1.5px);
-            background-size: 24px 24px;
-            color: #4A4A4A;
-            user-select: none;
-        }
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
-        .gm-style { z-index: 10; font-family: inherit; }
-    </style>
-    
-    <!-- 引入外部 CSS，維持你原本寫好的 app-container 與 nav 底部安全區域設定 -->
+
+    <!-- 純 CSS 樣式則維持外部引入，完全由它接管安全區域 -->
     <link rel="stylesheet" href="./css/main.css">
 </head>
-<!-- 【修改點】：移除 h-screen，換回你原本的 app-container 讓外部 CSS 接管高度 -->
-<body class="flex justify-center items-center w-screen overflow-hidden leading-relaxed app-container bg-[#F4EFE6]">
+<body class="flex justify-center items-center w-screen overflow-hidden leading-relaxed app-container">
 
     <div id="loading-overlay" class="fixed inset-0 bg-black/60 z-[99999] hidden flex-col justify-center items-center text-white backdrop-blur-sm">
         <i class="fa-solid fa-spinner fa-spin text-4xl mb-4 text-morandi-light"></i>
@@ -126,8 +84,8 @@
             </div>
             
             <div class="flex flex-col gap-4 px-4 w-full max-w-[280px] mx-auto mt-6">
-                <input type="email" id="fb-email" placeholder="信箱" class="w-full bg-white/10 border border-white/20 rounded-xl p-3 text-white placeholder-indigo-200/50 focus:outline-none focus:ring-2 focus:ring-indigo-400">
-                <input type="password" id="fb-password" placeholder="密碼" class="w-full bg-white/10 border border-white/20 rounded-xl p-3 text-white placeholder-indigo-200/50 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                <input type="text" id="fb-account" placeholder="帳號 (限英數字，無空格)" class="w-full bg-white/10 border border-white/20 rounded-xl p-3 text-white placeholder-indigo-200/50 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                <input type="password" id="fb-password" placeholder="密碼 (至少6位數)" class="w-full bg-white/10 border border-white/20 rounded-xl p-3 text-white placeholder-indigo-200/50 focus:outline-none focus:ring-2 focus:ring-indigo-400">
                 <div class="flex gap-3 mt-2">
                     <button onclick="handleFirebaseLogin()" class="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 rounded-xl transition duration-200 shadow-md active:scale-95 focus:outline-none">
                         登入
@@ -141,17 +99,16 @@
         </div>
     </div>
 
-<!-- 【修改點】：保留原本的 h-full，並加上 md 與 lg 的斷點控制最大寬度 -->
-<div id="app" class="w-full md:max-w-4xl lg:max-w-6xl mx-auto bg-[#F4EFE6] h-full flex flex-col relative md:shadow-2xl overflow-hidden border-x border-gray-100 transition-all duration-300">
+<div id="app" class="w-full md:max-w-4xl lg:max-w-6xl mx-auto bg-[#F4EFE6] h-full flex flex-col relative shadow-2xl overflow-hidden border border-gray-100 transition-all duration-300">
     
-    <header class="bg-morandi-light pt-8 md:pt-10 pb-3 px-5 md:px-10 rounded-b-[2.5rem] md:rounded-b-[3rem] shadow-sm flex-shrink-0 z-20">
+    <header class="bg-morandi-light pt-8 pb-3 px-5 rounded-b-[2.5rem] shadow-sm flex-shrink-0 z-20">
         <div class="flex justify-between items-center mb-4">
             <div class="flex-1 mr-4">
                 <input v-if="isEditingTitle" v-model.trim="tripTitle" @blur="isEditingTitle = false" @keyup.enter="isEditingTitle = false" ref="titleInput"
                        class="text-xl font-bold bg-[#FAF6EB] px-2 py-1 rounded-md w-full border border-morandi text-text-main outline-none">
-                <h1 v-else @click="editTitle" class="text-xl font-bold text-text-main tracking-wide flex items-center cursor-pointer group">
+                <h1 v-else @click="checkPermission('canEditTitle') ? editTitle() : null" class="text-xl font-bold text-text-main tracking-wide flex items-center group" :class="{'cursor-pointer': checkPermission('canEditTitle')}">
                     {{ tripTitle }}
-                    <i class="fa-regular fa-pen-to-square text-xs ml-2 text-morandi-dark opacity-50 group-hover:opacity-100 transition"></i>
+                    <i v-if="checkPermission('canEditTitle')" class="fa-regular fa-pen-to-square text-xs ml-2 text-morandi-dark opacity-50 group-hover:opacity-100 transition"></i>
                 </h1>
             </div>
             
@@ -187,12 +144,12 @@
                  :style="currentTab === 'day-' + index ? { backgroundColor: currentThemeColor, color: '#FAF6EB', fontWeight: '600' } : { backgroundColor: '#FAF6EB', color: '#737373', border: '1px solid #EAE3D2' }">
                 <span class="text-[9px] opacity-80 mb-0.5">Day {{ index + 1 }}</span>
                 <span class="text-xs font-bold">{{ day.date }}</span>
-                <button v-if="currentTab === 'day-' + index" @click.stop="deleteDay(index)" class="absolute -top-1 -right-1 bg-red-400 rounded-full w-4 h-4 flex items-center justify-center text-[10px] shadow-sm hover:bg-red-500 active:scale-90 transition-transform" style="color: white;">
+               <button v-if="currentTab === 'day-' + index && checkPermission('canManageDays')" @click.stop="deleteDay(index)" class="absolute -top-1 -right-1 bg-red-400 rounded-full w-4 h-4 flex items-center justify-center text-[10px] shadow-sm hover:bg-red-500 active:scale-90 transition-transform" style="color: white;">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
 
-            <div @click="addNewDay" 
+            <div v-if="checkPermission('canManageDays')" @click="addNewDay" 
                  class="flex-shrink-0 flex flex-col items-center justify-center w-14 h-16 rounded-2xl cursor-pointer transition-all duration-300 bg-gray-50 border border-dashed border-gray-300 text-gray-400 hover:text-morandi hover:border-morandi active:scale-95">
                 <i class="fa-solid fa-plus text-xs mb-1"></i>
                 <span class="text-[9px]">新增天數</span>
@@ -207,7 +164,7 @@
         </div>
     </header>
 
-    <main class="flex-1 overflow-y-auto hide-scrollbar p-4 md:p-8 pb-20 md:pb-24 bg-[#F4EFE6]">
+    <main class="flex-1 overflow-y-auto hide-scrollbar p-4 pb-20 bg-[#F4EFE6]">
         
         <div v-if="currentTab === 'todo'" class="space-y-4">
             <div class="flex items-center justify-between border-b border-gray-100 pb-2">
@@ -218,7 +175,7 @@
             </div>
             
             <div class="flex flex-col space-y-2">
-                <div class="flex space-x-2">
+                <div class="flex space-x-2" v-if="checkPermission('canManageTodo')">
                     <input v-model="newTodoText" @keyup.enter="addTodo" @input="todoError = false" type="text" placeholder="新增待辦事項..." 
                            class="input-field flex-1" :class="{'input-error': todoError}">
                     <button @click="addTodo" class="btn-primary">
@@ -228,7 +185,6 @@
                 <span v-if="todoError" class="text-red-500 text-xs px-2">請輸入待辦事項內容</span>
             </div>
 
-            <!-- 【修改點】：導入 RWD 網格 -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
                 <div v-for="(todo, idx) in todos" :key="idx" 
                      class="card-container flex items-center justify-between h-full"
@@ -237,7 +193,7 @@
                         <input type="checkbox" v-model="todo.done" class="w-4 h-4 rounded text-morandi focus:ring-morandi border-gray-300">
                         <span class="text-sm text-text-main" :class="{'line-through text-text-sub': todo.done}">{{ todo.text }}</span>
                     </label>
-                    <button @click="deleteTodo(idx)" class="btn-icon text-gray-300 hover:text-red-400 p-1">
+                    <button v-if="checkPermission('canManageTodo')" @click="deleteTodo(idx)" class="btn-icon text-gray-300 hover:text-red-400 p-1">
                         <i class="fa-solid fa-trash-can text-xs"></i>
                     </button>
                 </div>
@@ -275,7 +231,6 @@
                 </button>
             </div>
 
-            <!-- 【修改點】：導入 RWD 網格 -->
             <div v-if="dayViewMode === 'list'" class="space-y-4 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4" ref="itineraryList">
                 <div v-for="(item, idx) in currentItinerary" :key="item.id || idx" 
                      class="itinerary-item card-container relative flex flex-col h-full"
@@ -321,7 +276,7 @@
                         <button @click="openExternalNav(idx)" class="btn-icon flex items-center font-medium text-xs">
                             <i class="fa-solid fa-diamond-turn-right mr-1 text-xs"></i>導航
                         </button>
-                        <div class="flex space-x-4 text-xs text-text-sub">
+                        <div v-if="checkPermission('canManageItinerary')" class="flex space-x-4 text-xs text-text-sub">
                             <button @click="openEditModal(idx)" class="btn-icon"><i class="fa-solid fa-pen-to-square mr-1"></i>編輯</button>
                             <button @click="deleteItineraryItem(idx)" class="btn-icon hover:text-red-400"><i class="fa-solid fa-trash-can mr-1"></i>刪除</button>
                         </div>
@@ -330,7 +285,7 @@
 
                 <p v-if="currentItinerary.length === 0" class="text-center text-xs text-text-sub py-8 md:col-span-full">這天還沒有安排行程，點擊下方新增吧！</p>
 
-                <button @click="openAddModal" class="w-full py-4 border-2 border-dashed rounded-2xl text-sm font-medium active:scale-95 transition-transform flex items-center justify-center space-x-2 hover:opacity-80 md:col-span-full"
+                <button v-if="checkPermission('canManageItinerary')" @click="openAddModal" class="w-full py-4 border-2 border-dashed rounded-2xl text-sm font-medium active:scale-95 transition-transform flex items-center justify-center space-x-2 hover:opacity-80 md:col-span-full"
                         :style="{ borderColor: currentThemeColor, color: currentThemeColor, backgroundColor: '#FAF6EB' }">
                     <i class="fa-solid fa-plus-circle"></i> <span>新增行程目的地</span>
                 </button>
@@ -339,7 +294,6 @@
                 </button>
             </div>
 
-            <!-- 【修改點】：地圖高度響應式 -->
             <div v-show="dayViewMode === 'map'" class="space-y-4">
                 <div class="card-container text-xs text-text-sub space-y-2">
                     <div class="flex items-center space-x-2">
@@ -374,12 +328,11 @@
                 <h2 class="text-base font-bold text-text-main flex items-center">
                     <i class="fa-solid fa-circle-info mr-2 text-morandi-dark"></i>旅程資訊隨身站
                 </h2>
-                <button @click="openAddInfoModal" class="text-xs text-morandi-dark bg-morandi-light px-4 py-1 rounded-full font-medium active:scale-95 transition-transform hover:bg-morandi-accent">
+                <button v-if="checkPermission('canManageInfo')" @click="openAddInfoModal" class="text-xs text-morandi-dark bg-morandi-light px-4 py-1 rounded-full font-medium active:scale-95 transition-transform hover:bg-morandi-accent">
                     + 新增資訊
                 </button>
             </div>
 
-            <!-- 【修改點】：導入 RWD 網格 -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                 <div v-for="(cat, catName) in infoStation" :key="catName" class="card-container space-y-4 h-fit">
                     <h3 class="text-sm font-bold text-morandi-deep flex items-center border-b border-gray-100 pb-2">
@@ -389,7 +342,7 @@
                         <div v-for="(info, iIdx) in cat" :key="iIdx" class="bg-[#F4EFE6] p-4 rounded-xl relative group">
                             <div class="flex justify-between items-start">
                                 <h4 class="text-xs font-bold text-text-main">{{ info.title }}</h4>
-                                <button @click="deleteInfoItem(catName, iIdx)" class="btn-icon text-gray-300 hover:text-red-400 text-xs">
+                                <button v-if="checkPermission('canManageInfo')" @click="deleteInfoItem(catName, iIdx)" class="btn-icon text-gray-300 hover:text-red-400 text-xs">
                                     <i class="fa-solid fa-trash"></i>
                                 </button>
                             </div>
@@ -407,7 +360,6 @@
 
     </main>
 
-    <!-- 【修改點】：保留原本的 pb-4，讓外部 CSS 可以用 padding-bottom 覆寫延伸 -->
     <nav class="absolute bottom-0 w-full bg-[#FAF6EB] border-t border-gray-200 flex justify-around md:justify-center md:gap-20 pt-2 pb-4 z-30 shadow-lg md:rounded-t-3xl">
         <button @click="handleTabChange(days.length > 0 ? 'day-0' : 'todo')" class="flex flex-col items-center btn-icon" :class="currentTab.startsWith('day-') ? 'text-morandi-dark font-semibold' : 'text-text-sub'">
             <i class="fa-solid fa-calendar-alt text-base mb-0.5"></i>
@@ -419,9 +371,8 @@
         </button>
     </nav>
 
-    <!-- 【修改點】：購物車視窗 RWD，手機維持置底，大螢幕置中 -->
-    <div v-if="showShoppingModal" class="absolute inset-0 bg-black/40 z-[9999] flex items-end md:items-center justify-center transition-all p-0 md:p-4">
-        <div class="bg-[#FAF6EB] w-full md:max-w-md lg:max-w-lg rounded-t-[2.5rem] md:rounded-3xl max-h-[80vh] flex flex-col p-6 shadow-2xl animate-slide-up">
+    <div v-if="showShoppingModal" class="absolute inset-0 bg-black/40 z-[9999] flex items-start md:items-center justify-center pt-[10vh] md:pt-0 p-4 transition-all">
+        <div class="bg-[#FAF6EB] w-full max-w-sm md:max-w-md lg:max-w-lg rounded-3xl max-h-[80vh] flex flex-col p-6 shadow-2xl">
             <div class="flex justify-between items-center border-b border-gray-200 pb-4">
                 <h3 class="font-bold text-text-main flex items-center text-base">
                     <i class="fa-solid fa-basket-shopping text-morandi-dark mr-2"></i>代買購物清單
@@ -429,7 +380,7 @@
                 <button @click="showShoppingModal = false" class="btn-icon text-lg hover:text-text-main"><i class="fa-solid fa-xmark"></i></button>
             </div>
             
-            <div class="flex space-x-2 mt-4">
+           <div v-if="checkPermission('canManageShopping')" class="flex space-x-2 mt-4">
                 <input v-model="newShoppingItem" @keyup.enter="addShoppingItem" type="text" placeholder="輸入想購買的商品/藥妝..." class="input-field flex-1">
                 <button @click="addShoppingItem" class="btn-primary text-xs">新增</button>
             </div>
@@ -440,14 +391,15 @@
                         <input type="checkbox" v-model="shop.bought" class="w-4 h-4 rounded text-morandi focus:ring-morandi border-gray-300">
                         <span class="text-xs text-text-main" :class="{'line-through': shop.bought}">{{ shop.text }}</span>
                     </label>
-                    <button @click="deleteShoppingItem(sIdx)" class="btn-icon text-gray-300 hover:text-red-400 p-1"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                    <button v-if="checkPermission('canManageShopping')" @click="deleteShoppingItem(sIdx)" class="btn-icon text-gray-300 hover:text-red-400 p-1">
+                      <i class="fa-solid fa-trash-can text-xs"></i>
+                    </button>
                 </div>
                 <p v-if="shoppingList.length === 0" class="text-center text-xs text-text-sub py-8 md:col-span-full">購物清單空空如也</p>
             </div>
         </div>
     </div>
 
-    <!-- 【修改點】：Modal RWD 展開寬度 -->
     <div v-if="showItineraryModal" class="absolute inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4">
         <div class="bg-[#FAF6EB] w-full max-w-sm md:max-w-md lg:max-w-lg rounded-3xl p-6 space-y-4 shadow-xl">
             <h3 class="font-bold text-text-main text-base">{{ modalMode === 'add' ? '新增行程目的地' : '編輯行程目的地' }}</h3>
@@ -509,7 +461,6 @@
         </div>
     </div>
 
-    <!-- 【修改點】：Modal RWD 展開寬度與按鈕排版優化 -->
     <div v-if="showSyncModal" class="absolute inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4">
         <div class="bg-[#FAF6EB] w-full max-w-sm md:max-w-md lg:max-w-2xl rounded-3xl p-6 space-y-4 shadow-xl max-h-[90%] overflow-y-auto">
             <div class="flex justify-between items-center border-b border-gray-200 pb-2">
@@ -559,13 +510,28 @@
                         <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin mr-1"></i>
                         <i v-else class="fa-solid fa-cloud-arrow-up mr-1"></i>備份
                     </button>
-                    <button v-if="!isTravelGuest" @click="archiveToCloud" :disabled="isSyncing" class="btn-secondary flex-1 min-w-[100px] border-red-200 text-red-500 hover:bg-red-50">
+                    <button v-if="!isTravelGuest" @click="archiveToCloud" :disabled="isSyncing || tripTitle.startsWith('[已封存]')" class="btn-secondary flex-1 min-w-[100px] border-red-200 text-red-500 hover:bg-red-50" :class="{'opacity-50 cursor-not-allowed': tripTitle.startsWith('[已封存]')}">
                         <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin mr-1"></i>
                         <i v-else class="fa-solid fa-box-archive mr-1"></i>封存
+                    </button>
+                    <button v-if="!isTravelGuest" @click="handleUnarchive" :disabled="isSyncing" class="btn-secondary flex-1 min-w-[100px] border-yellow-400 text-yellow-600 hover:bg-yellow-50">
+                        <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin mr-1"></i>
+                        <i v-else class="fa-solid fa-box-open mr-1"></i>解開封存
                     </button>
                     <button @click="fetchCloudList" :disabled="isSyncing" class="btn-secondary min-w-[100px]" :class="isTravelGuest ? 'w-full' : 'flex-1'">
                         <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin mr-1"></i>
                         <i v-else class="fa-solid fa-sync mr-1"></i>讀取目錄
+                    </button>
+                </div>
+
+                <div v-if="showUnarchiveSelector" class="flex space-x-2 text-xs mt-4 bg-yellow-50 p-2 rounded-xl border border-yellow-200 animate-slide-up">
+                    <select v-model="selectedArchivedTrip" class="input-field flex-1 bg-[#FAF6EB]">
+                        <option disabled value="">請選擇要解封的行程</option>
+                        <option v-for="trip in archivedTrips" :key="trip" :value="trip">{{ trip }}</option>
+                    </select>
+                    <button @click="executeUnarchive(selectedArchivedTrip)" :disabled="!selectedArchivedTrip || isSyncing" class="btn-primary px-4 bg-yellow-500 hover:bg-yellow-600 border-none">
+                        <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin"></i>
+                        <span v-else>確認解封</span>
                     </button>
                 </div>
 
@@ -578,6 +544,10 @@
                         <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin"></i>
                         <i v-else class="fa-solid fa-download"></i>
                     </button>
+                    <button v-if="selectedCloudTrip && selectedCloudTrip.startsWith('[已封存]')" @click="unarchiveToCloud" :disabled="isSyncing" class="btn-secondary px-4 border-yellow-300 text-yellow-600 hover:bg-yellow-50">
+                        <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin"></i>
+                        <i v-else class="fa-solid fa-box-open"></i>
+                    </button>
                 </div>
 
                 <p v-if="syncMessage" class="text-[11px] text-center mt-2 font-bold" :class="syncSuccess ? 'text-teal-600' : 'text-red-500'">{{ syncMessage }}</p>
@@ -587,922 +557,19 @@
 
 </div>
 
+<script src="./js/config.js"></script>
+<script src="./js/utils.js"></script>
+<script src="./js/ui.js"></script>
+<script src="./js/api.js"></script>
+<script src="./js/modules/map.js"></script>
+<script src="./js/modules/weather.js"></script>
+<script src="./js/auth.js"></script>
+<script src="./js/permission.js"></script>
+<script src="./js/modules/record.js"></script>
 <script>
-const { createApp } = Vue;
-
-// 【新增區塊開始】
-const MapManager = {
-    mapInstance: null,
-    markers: [],
-    userMarker: null,
-    geocoder: null,
-    locationCache: JSON.parse(localStorage.getItem('myTripLocationCache') || '{}'), 
-    abortController: null,
-    
-    init(elementId) {
-        if (!this.mapInstance && typeof google !== 'undefined') {
-            const mapEl = document.getElementById(elementId);
-            if (mapEl) {
-                this.mapInstance = new google.maps.Map(mapEl, {
-                    center: { lat: 23.5, lng: 121 },
-                    zoom: 7,
-                    mapTypeControl: false,
-                    streetViewControl: false
-                });
-                this.geocoder = new google.maps.Geocoder();
-            }
-        }
-        return this.mapInstance;
-    },
-
-    clearMarkers() {
-        this.markers.forEach(m => m.setMap(null));
-        this.markers = [];
-    },
-
-    abortCurrentTasks() {
-        if (this.abortController) {
-            this.abortController.abort();
-        }
-        this.abortController = new AbortController();
-    },
-
-    async updateMarkers(items, themeColor, loadingCallback) {
-        this.abortCurrentTasks();
-        const signal = this.abortController.signal;
-        
-        this.clearMarkers();
-        
-        if (!this.mapInstance || !this.geocoder || items.length === 0) {
-            loadingCallback(false, '');
-            return;
-        }
-
-        loadingCallback(true, '準備載入地圖標記...');
-        const bounds = new google.maps.LatLngBounds();
-
-        for (let i = 0; i < items.length; i++) {
-            if (signal.aborted) return;
-
-            const item = items[i];
-            let lat = item.lat;
-            let lng = item.lng;
-
-            if (!lat || !lng) {
-                if (this.locationCache[item.location]) {
-                    lat = this.locationCache[item.location].lat;
-                    lng = this.locationCache[item.location].lng;
-                }
-            }
-
-            if (lat && lng) {
-                this.addMarker(lat, lng, item, themeColor, bounds);
-                continue;
-            }
-
-            loadingCallback(true, `正在搜尋地點座標 (${i + 1}/${items.length})...`);
-            
-            try {
-                const coords = await this.geocode(item.location, signal);
-                if (signal.aborted) return;
-                if (coords) {
-                    item.lat = coords.lat; 
-                    item.lng = coords.lng;
-                    this.locationCache[item.location] = coords; 
-                    localStorage.setItem('myTripLocationCache', JSON.stringify(this.locationCache));
-                    this.addMarker(coords.lat, coords.lng, item, themeColor, bounds);
-                }
-            } catch (err) {
-                console.error("地址轉換失敗:", item.location, err);
-            }
-
-            if (!signal.aborted) {
-                await new Promise(res => setTimeout(res, 350));
-            }
-        }
-
-        if (!signal.aborted) {
-            if (this.markers.length > 0) this.mapInstance.fitBounds(bounds);
-            loadingCallback(false, '');
-        }
-    },
-
-    addMarker(lat, lng, item, themeColor, bounds) {
-        const location = new google.maps.LatLng(lat, lng);
-        const marker = new google.maps.Marker({
-            position: location, map: this.mapInstance, title: item.location,
-            icon: { path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW, scale: 6, fillColor: themeColor, fillOpacity: 1, strokeColor: '#FAF6EB', strokeWeight: 2 }
-        });
-        const infoWindow = new google.maps.InfoWindow({ content: `<b>${item.location}</b><br><span style="font-size:10px; color:gray;">${item.category}</span>` });
-        marker.addListener('click', () => { infoWindow.open(this.mapInstance, marker); });
-        this.markers.push(marker);
-        bounds.extend(location);
-    },
-
-    geocode(address, signal) {
-        return new Promise((resolve, reject) => {
-            const timeoutId = setTimeout(() => reject('TIMEOUT'), 2000);
-            
-            const checkAbort = () => {
-                if (signal.aborted) {
-                    clearTimeout(timeoutId);
-                    reject(new Error('ABORTED'));
-                }
-            };
-            signal.addEventListener('abort', checkAbort);
-
-            this.geocoder.geocode({ address }, (res, status) => {
-                clearTimeout(timeoutId);
-                signal.removeEventListener('abort', checkAbort);
-                if (signal.aborted) {
-                    reject(new Error('ABORTED'));
-                    return;
-                }
-                if (status === 'OK' && res.length > 0) {
-                    resolve({
-                        lat: res[0].geometry.location.lat(),
-                        lng: res[0].geometry.location.lng()
-                    });
-                } else {
-                    resolve(null);
-                }
-            });
-        });
-    }
-};
-// 【新增區塊結束】
-
     let vueAppInstance = null;
 
-    function showLoading(t) { 
-        document.getElementById('loading-text').innerText = t; 
-        document.getElementById('loading-overlay').classList.replace('hidden', 'flex'); 
-    }
-    
-    function hideLoading() { 
-        document.getElementById('loading-overlay').classList.replace('flex', 'hidden'); 
-    }
-
-    async function handleFirebaseLogin() {
-        if (!window.firebaseAuth) { alert("Firebase 尚未載入完成，請稍候"); return; }
-        const email = document.getElementById('fb-email').value;
-        const password = document.getElementById('fb-password').value;
-        const errorMsg = document.getElementById('fb-error-msg');
-        
-        if (!email || !password) {
-            errorMsg.innerText = "請輸入完整信箱與密碼"; errorMsg.style.opacity = '1'; return;
-        }
-        
-        showLoading("登入中...");
-        try {
-            await window.signInWithEmailAndPassword(window.firebaseAuth, email, password);
-            // 權限判斷已交由後端資料庫，前端直接解鎖
-            unlockApp();
-        } catch (error) {
-            errorMsg.innerText = "登入失敗：" + error.code; errorMsg.style.opacity = '1';
-        } finally {
-            hideLoading();
-        }
-    }
-
-    async function handleFirebaseRegister() {
-        if (!window.firebaseAuth) { alert("Firebase 尚未載入完成，請稍候"); return; }
-        const email = document.getElementById('fb-email').value;
-        const password = document.getElementById('fb-password').value;
-        const errorMsg = document.getElementById('fb-error-msg');
-        
-        if (!email || !password) {
-            errorMsg.innerText = "請輸入完整信箱與密碼"; errorMsg.style.opacity = '1'; return;
-        }
-        
-        showLoading("註冊中...");
-        try {
-            await window.createUserWithEmailAndPassword(window.firebaseAuth, email, password);
-            unlockApp();
-        } catch (error) {
-            if (error.code === 'auth/email-already-in-use') {
-                errorMsg.innerText = "此信箱已被註冊，請直接登入";
-            } else if (error.code === 'auth/weak-password') {
-                errorMsg.innerText = "密碼過弱，請至少輸入 6 個字元";
-            } else {
-                errorMsg.innerText = "註冊失敗：" + error.code;
-            }
-            errorMsg.style.opacity = '1';
-        } finally {
-            hideLoading();
-        }
-    }
-
-    function unlockApp() {            
-        const overlay = document.getElementById('lock-screen');
-        if (overlay) {
-            overlay.classList.add('opacity-0', 'pointer-events-none');
-            overlay.style.transform = "scale(1.1)";
-            setTimeout(() => { overlay.classList.add('hidden'); overlay.classList.remove('flex'); }, 400);
-        }
-    }
-
-    async function handleFirebaseLogout() {
-        if(confirm('確定要登出系統並返回登入畫面嗎？')) {
-            try {
-                if (window.firebaseAuth) await window.signOut(window.firebaseAuth);
-                // 登出後重新載入乾淨頁面，由 Firebase 狀態監聽器觸發鎖定
-                window.location.href = window.location.origin + window.location.pathname;
-            } catch (e) {
-                alert("登出失敗：" + e.message);
-            }
-        }
-    }
-
-    window.addEventListener('load', () => {
-        setTimeout(() => {
-            if (window.onAuthStateChanged && window.firebaseAuth) {
-                window.onAuthStateChanged(window.firebaseAuth, async (user) => {
-                    if (user) {
-                        if (vueAppInstance) {
-                            vueAppInstance.currentUserUid = user.uid;
-                        }
-                        try {
-                            // 🌟 1. 權限探測：嘗試讀取受保護的虛擬節點，由安全規則決定是否放行
-                            let superAdminStatus = false;
-                            try {
-                                await window.getDoc(window.doc(window.firebaseDb, "system", "admin_verify"));
-                                superAdminStatus = true; // 沒報錯代表規則放行，判定為超級管理員
-                            } catch (e) {
-                                superAdminStatus = false; // 發生權限錯誤，判定為一般旅客
-                            }
-                            if (vueAppInstance) vueAppInstance.isSuperAdmin = superAdminStatus;
-
-                            window.currentTravelOwnerUid = "";
-                            let isMaster = false;
-                            
-                            // 🌟 將探測結果直接賦予全域最高權限
-                            if (superAdminStatus) {
-                                isMaster = true;
-                            }
-                            
-                            if (vueAppInstance) {
-                                vueAppInstance.isTravelMaster = isMaster;
-                                vueAppInstance.isTravelGuest = !isMaster;
-                            }
-                        } catch (error) {
-                            console.error("雲端權限驗證失敗：", error);
-                            // 若驗證失敗或無權限，系統一律預設降級為一般訪客
-                            if (vueAppInstance) {
-                                vueAppInstance.isTravelMaster = false;
-                                vueAppInstance.isTravelGuest = true;
-                            }
-                        } finally {
-                            // 確保等雲端驗證完畢後，才解鎖畫面繼續流程
-                            unlockApp();
-                        }
-                    } else {
-                        if (vueAppInstance) {
-                            vueAppInstance.currentUserUid = null;
-                            vueAppInstance.isTravelMaster = false;
-                            vueAppInstance.isTravelGuest = true;
-                            vueAppInstance.detectedCloudTrips = []; // 新增：登出時清空歷史專案
-                        }
-                    }
-                });
-            }
-        }, 500); 
-    });
-
-// 【新增前後辨識用：新增後3行】
-const appInstance = createApp({
-    data() {        const urlParams = new URLSearchParams(window.location.search);
-        const isGuestUrl = urlParams.get('guest') === '1';
-        const isUnlockUrl = urlParams.get('unlock') === '1';
-        const cleanUrl = window.location.origin + window.location.pathname;
-
-        if (isUnlockUrl) {
-            localStorage.removeItem('guestModeFlag');
-            alert('🔓 管理者模式已成功解鎖！將自動重新載入主頁面。');
-            window.location.href = cleanUrl; 
-        } else if (isGuestUrl) {
-            localStorage.setItem('guestModeFlag', 'true');
-        }
-
-        const finalIsGuest = isGuestUrl || localStorage.getItem('guestModeFlag') === 'true';
-
-        return {
-            isTravelGuest: finalIsGuest, // 變更詞彙，區隔記帳本
-            isTravelMaster: false,      // 變更詞彙，區隔記帳本
-            isSuperAdmin: false,        // 🌟 新增：存放由 Firebase 探測出來的最高權限
-            currentUserUid: null,
-            isTripLocked: false,
-            appVersion: '0.0.0.0.48 -260714-修正BUG ',
-            tripTitle: '我的全新旅程',
-            isEditingTitle: false,
-            currentTab: 'todo',
-            dayViewMode: 'list',
-            
-            days: [],
-            itineraries: {},
-
-            todos: [
-                { text: '確認護照效期大於六個月', done: true },
-                { text: '投保旅遊平安險與不便險', done: false },
-                { text: '開通網卡與雙重驗證開關', done: false }
-            ],
-            newTodoText: '',
-            todoError: false,
-            showShoppingModal: false,
-            shoppingList: [
-                { text: '合利他命 EX Plus * 2', bought: false },
-                { text: '純米大吟釀 地酒 * 1', bought: false }
-            ],
-            newShoppingItem: '',
-
-            showSyncModal: false,
-            gasUrl: '',
-            gasUrlError: false,
-            isSyncing: false,
-            syncMessage: '',
-            syncSuccess: true,
-            
-            keepTemplates: true,
-            cloudTrips: [],
-            selectedCloudTrip: '',
-
-            infoStation: {
-                '資訊整理': [],
-                '備用參考景點': [],
-                '緊急醫療': []
-            },
-            showInfoModal: false,
-            infoModalData: { category: '資訊整理', title: '', content: '' },
-
-            showItineraryModal: false,
-            modalMode: 'add',
-            editItemIndex: null,
-            modalData: { category: '景點', location: '', notes: '' },
-            modalError: false,
-
-            isMapLoading: false,
-            loadingMapMsg: '',
-
-            sortableInstance: null,
-            weatherCache: {}
-        };
-    },
-    computed: {
-        currentThemeColor() {
-            const matchaGreen = 'hsl(120, 20%, 50%)'; 
-            if (this.currentDayIndex === null) return matchaGreen;
-            
-            const totalDays = Math.max(1, this.days.length);
-            if (totalDays <= 1) return 'hsl(15, 70%, 60%)';
-            
-            const ratio = this.currentDayIndex / (totalDays - 1);
-            const h = 15 + (120 - 15) * ratio;
-            const s = 70 + (20 - 70) * ratio;
-            const l = 60 + (50 - 60) * ratio; 
-            
-            return `hsl(${h}, ${s}%, ${l}%)`;
-        },
-        currentThemeColorLight() {
-            const matchaGreenLight = 'hsl(120, 20%, 85%)';
-            if (this.currentDayIndex === null) return matchaGreenLight;
-            
-            const totalDays = Math.max(1, this.days.length);
-            if (totalDays <= 1) return 'hsl(15, 70%, 85%)';
-            
-            const ratio = this.currentDayIndex / (totalDays - 1);
-            const h = 15 + (120 - 15) * ratio;
-            const s = 70 + (20 - 70) * ratio;
-            
-            return `hsl(${h}, ${s}%, 85%)`;
-        },
-        currentDayIndex() {
-            if (this.currentTab.startsWith('day-')) {
-                return parseInt(this.currentTab.split('-')[1]);
-            }
-            return null;
-        },
-        currentItinerary() {
-            if (this.currentDayIndex !== null && this.itineraries[this.currentDayIndex]) {
-                return this.itineraries[this.currentDayIndex];
-            }
-            return [];
-        },
-        currentDayCompletedCount() {
-            return this.currentItinerary.filter(item => item.completed).length;
-        },
-        currentDayProgress() {
-            if (this.currentItinerary.length === 0) return 0;
-            return Math.round((this.currentDayCompletedCount / this.currentItinerary.length) * 100);
-        },
-        remainingSpotsCount() {
-            return this.currentItinerary.length - this.currentDayCompletedCount;
-        },
-        completedTodoCount() {
-            return this.todos.filter(t => t.done).length;
-        },
-        remainingShoppingCount() {
-            return this.shoppingList.filter(s => !s.bought).length;
-        }
-    },
-   watch: {        
-        tripTitle() { this.saveToLocal(); },
-        linkTripId() { this.saveToLocal(); },
-        days: { deep: true, handler() { this.saveToLocal(); } },
-        itineraries: { deep: true, handler() { this.saveToLocal(); } },
-        todos: { deep: true, handler() { this.saveToLocal(); } },
-        shoppingList: { deep: true, handler() { this.saveToLocal(); } },
-        infoStation: { deep: true, handler() { this.saveToLocal(); } },
-        gasUrl() { this.saveToLocal(); }
-    },
-    mounted() {
-        this.loadFromLocal();
-    },
-
-methods: {
-        handleTabChange(tabName) {
-            this.currentTab = tabName;
-            if (tabName.startsWith('day-')) {
-                if (this.dayViewMode === 'map') {
-                    this.initMap();
-                } else {
-                    this.initSortable();
-                }
-            } else {
-                MapManager.abortCurrentTasks();
-            }
-        },
-        handleViewMode(mode) {
-            this.dayViewMode = mode;
-            if (mode === 'map') {
-                this.initMap();
-            } else {
-                this.initSortable();
-            }
-        },
-        
-        // 必須補回此函式，否則 Vue 渲染會崩潰
-        handleTabScroll(e) {
-            if (e.deltaY !== 0) {
-                e.preventDefault();
-                this.$refs.tabsContainer.scrollLeft += e.deltaY;
-            }
-        },
-
-        addNewDay() {
-            const dateStr = prompt('請輸入這天的日期 (例如：10/24)：', '');
-            if (dateStr && dateStr.trim() !== '') {
-                const newIndex = this.days.length;
-                this.days.push({ date: dateStr.trim() });
-                this.itineraries[newIndex] = [];
-                this.handleTabChange('day-' + newIndex);
-            }
-        },
-        deleteDay(index) {
-            if(confirm(`確定要刪除 Day ${index + 1} (${this.days[index].date}) 以及裡面的所有行程嗎？`)) {
-                this.days.splice(index, 1);
-                const newItineraries = {};
-                this.days.forEach((day, i) => {
-                    newItineraries[i] = this.itineraries[i >= index ? i + 1 : i] || [];
-                });
-                this.itineraries = newItineraries;
-                this.handleTabChange('todo');
-            }
-        },
-        editTitle() {
-            this.isEditingTitle = true;
-            this.$nextTick(() => { this.$refs.titleInput.focus(); });
-        },
-                initSortable() {
-            this.$nextTick(() => {
-                const el = this.$refs.itineraryList;
-                if (!el) return;
-                
-                if (this.sortableInstance) {
-                    this.sortableInstance.destroy();
-                }
-                
-                this.sortableInstance = Sortable.create(el, {
-                    handle: '.drag-handle',
-                    animation: 150,
-                    draggable: '.itinerary-item',
-                    onEnd: (evt) => {
-                        const oldIdx = evt.oldIndex;
-                        const newIdx = evt.newIndex;
-                        if (oldIdx !== newIdx) {
-                            const list = this.itineraries[this.currentDayIndex];
-                            const movedItem = list.splice(oldIdx, 1)[0];
-                            list.splice(newIdx, 0, movedItem);
-                        }
-                    }
-                });
-            });
-        },
-        getCategoryIcon(cat) {
-            const icons = { '景點': '⛩️', '住宿': '🏨', '交通': '🚇', '航班': '✈️', '美食': '🍜', '購物': '🛍️', '其他': '📍' };
-            return icons[cat] || '📍';
-        },
-        addTodo() {
-            if (!this.newTodoText.trim()) {
-                this.todoError = true;
-                return;
-            }
-            this.todos.push({ text: this.newTodoText.trim(), done: false });
-            this.newTodoText = '';
-            this.todoError = false;
-        },
-        deleteTodo(idx) {
-            this.todos.splice(idx, 1);
-        },
-        addShoppingItem() {
-            if (this.newShoppingItem.trim()) {
-                this.shoppingList.push({ text: this.newShoppingItem.trim(), bought: false });
-                this.newShoppingItem = '';
-            }
-        },
-        deleteShoppingItem(idx) {
-            this.shoppingList.splice(idx, 1);
-        },
-        getInfoCatIcon(cat) {
-            if (cat === '資訊整理') return 'fa-solid fa-folder-open text-teal-600';
-            if (cat === '備用參考景點') return 'fa-solid fa-map-pin text-amber-600';
-            return 'fa-solid fa-heart-pulse text-red-500';
-        },
-        openAddInfoModal() {
-            this.infoModalData = { category: '資訊整理', title: '', content: '' };
-            this.showInfoModal = true;
-        },
-        saveInfoItem() {
-            if (this.infoModalData.title && this.infoModalData.content) {
-                this.infoStation[this.infoModalData.category].push({
-                    title: this.infoModalData.title,
-                    content: this.infoModalData.content
-                });
-                this.showInfoModal = false;
-            }
-        },
-        deleteInfoItem(catName, idx) {
-            this.infoStation[catName].splice(idx, 1);
-        },
-        openAddModal() {
-            this.modalMode = 'add';
-            this.modalError = false;
-            this.modalData = { category: '景點', location: '', notes: '' };
-            this.showItineraryModal = true;
-        },
-        openEditModal(idx) {
-            this.modalMode = 'edit';
-            this.modalError = false;
-            this.editItemIndex = idx;
-            const item = this.currentItinerary[idx];
-            this.modalData = { ...item };
-            this.showItineraryModal = true;
-        },
-        saveItineraryItem() {
-            if (!this.modalData.location.trim()) {
-                this.modalError = true;
-                return;
-            }
-            if (this.modalMode === 'add') {
-                const newItem = { 
-                    ...this.modalData, 
-                    id: Date.now().toString(36) + Math.random().toString(36).substr(2),
-                    completed: false
-                };
-                this.itineraries[this.currentDayIndex].push(newItem);
-                this.$nextTick(() => { this.fetchWeatherForItem(newItem); });
-            } else {
-                this.itineraries[this.currentDayIndex][this.editItemIndex] = { ...this.modalData };
-                this.$nextTick(() => { this.fetchWeatherForItem(this.itineraries[this.currentDayIndex][this.editItemIndex]); });
-            }
-            this.showItineraryModal = false;
-            this.modalError = false;
-            if (this.dayViewMode === 'map') this.updateMapMarkers();
-        },
-        deleteItineraryItem(idx) {
-            this.itineraries[this.currentDayIndex].splice(idx, 1);
-            if (this.dayViewMode === 'map') this.updateMapMarkers();
-        },
-        openExternalNav(idx) {
-            const currentLoc = this.currentItinerary[idx].location;
-            if (!currentLoc) return;
-            let url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(currentLoc)}`;
-            if (idx > 0) {
-                const prevLoc = this.currentItinerary[idx - 1].location;
-                if (prevLoc) {
-                    url += `&origin=${encodeURIComponent(prevLoc)}`;
-                }
-            }
-            window.open(url, '_blank');
-        },
-        initMap() {
-            this.$nextTick(() => {
-                MapManager.init('map-canvas');
-                this.updateMapMarkers();
-            });
-        },
-        async updateMapMarkers() {
-            const currentItems = this.currentItinerary;
-            
-            if (currentItems.length === 0) {
-                MapManager.clearMarkers();
-                this.isMapLoading = false;
-                return;
-            }
-
-            await MapManager.updateMarkers(
-                currentItems, 
-                this.currentThemeColor,
-                (isLoading, msg) => {
-                    this.isMapLoading = isLoading;
-                    if (msg) this.loadingMapMsg = msg;
-                }
-            );
-        },
-        triggerGeolocation() {
-            const mapInst = MapManager.mapInstance;
-            if (!mapInst || typeof google === 'undefined') return;
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition((position) => {
-                    const pos = { lat: position.coords.latitude, lng: position.coords.longitude };
-                    if (MapManager.userMarker) MapManager.userMarker.setMap(null);
-                    MapManager.userMarker = new google.maps.Marker({
-                        position: pos, map: mapInst, title: "您目前的位置",
-                        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#f03', fillOpacity: 0.5, strokeColor: 'red', strokeWeight: 2 }
-                    });
-                    const infoWindow = new google.maps.InfoWindow({ content: "您目前的位置" });
-                    MapManager.userMarker.addListener('click', () => infoWindow.open(mapInst, MapManager.userMarker));
-                    mapInst.setCenter(pos);
-                    mapInst.setZoom(15);
-                }, () => {
-                    alert('無法讀取 GPS 定位，請確認手機/瀏覽器定位權限已開啟。');
-                });
-            } else {
-                alert('您的瀏覽器不支援定位功能。');
-            }
-        },
-        getWeatherInfo(code) {
-            const wmo = { 0:{icon:'☀️',desc:'晴天'}, 1:{icon:'🌤️',desc:'大致晴朗'}, 2:{icon:'⛅',desc:'部分多雲'}, 3:{icon:'☁️',desc:'陰天'}, 45:{icon:'🌫️',desc:'霧'}, 48:{icon:'🌫️',desc:'霧淞'}, 51:{icon:'🌦️',desc:'小毛毛雨'}, 53:{icon:'🌦️',desc:'中毛毛雨'}, 55:{icon:'🌧️',desc:'大毛毛雨'}, 61:{icon:'🌧️',desc:'小雨'}, 63:{icon:'🌧️',desc:'中雨'}, 65:{icon:'🌧️',desc:'大雨'}, 71:{icon:'❄️',desc:'小雪'}, 73:{icon:'❄️',desc:'中雪'}, 75:{icon:'❄️',desc:'大雪'}, 77:{icon:'🌨️',desc:'冰晶'}, 80:{icon:'🌦️',desc:'陣雨'}, 81:{icon:'🌧️',desc:'中陣雨'}, 82:{icon:'⛈️',desc:'大陣雨'}, 85:{icon:'🌨️',desc:'陣雪'}, 86:{icon:'🌨️',desc:'大陣雪'}, 95:{icon:'⛈️',desc:'雷陣雨'}, 96:{icon:'⛈️',desc:'雷陣雨夾冰雹'}, 99:{icon:'⛈️',desc:'強雷陣雨夾冰雹'} };
-            return wmo[code] || { icon: '🌡️', desc: '未知' };
-        },
-        async fetchWeatherForItem(item) {
-            const loc = item.location;
-            if (!loc) return;
-            this.weatherCache = { ...this.weatherCache, [loc]: { loading: true } };
-            try {
-                let lat, lon;
-                if (item.lat && item.lng) {
-                    lat = item.lat;
-                    lon = item.lng;
-                } else if (MapManager.locationCache && MapManager.locationCache[loc]) {
-                    lat = MapManager.locationCache[loc].lat;
-                    lon = MapManager.locationCache[loc].lng;
-                } else if (typeof google !== 'undefined') {
-                    const geocoder = new google.maps.Geocoder();
-                    const results = await new Promise((resolve) => {
-                        const timeoutId = setTimeout(() => { resolve(null); }, 2000);
-                        geocoder.geocode({ address: loc }, (res, status) => {
-                            clearTimeout(timeoutId);
-                            if (status === 'OK') resolve(res);
-                            else resolve(null);
-                        });
-                    });
-                    if (results && results.length > 0) {
-                        lat = results[0].geometry.location.lat();
-                        lon = results[0].geometry.location.lng();
-                        MapManager.locationCache[loc] = { lat: lat, lng: lon };
-                        localStorage.setItem('myTripLocationCache', JSON.stringify(MapManager.locationCache));
-                    } else {
-                        this.weatherCache = { ...this.weatherCache, [loc]: { error: true } };
-                        return;
-                    }
-                } else {
-                    this.weatherCache = { ...this.weatherCache, [loc]: { error: true } };
-                    return;
-                }
-                const weatherResp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&temperature_unit=celsius&timezone=auto`);
-                const weatherData = await weatherResp.json();
-                if (weatherData && weatherData.current) {
-                    const temp = Math.round(weatherData.current.temperature_2m);
-                    const code = weatherData.current.weather_code;
-                    const info = this.getWeatherInfo(code);
-                    this.weatherCache = { ...this.weatherCache, [loc]: { temp: `${temp}°C`, desc: info.desc, icon: info.icon, loading: false } };
-                } else {
-                    this.weatherCache = { ...this.weatherCache, [loc]: { error: true } };
-                }
-            } catch (err) {
-                this.weatherCache = { ...this.weatherCache, [loc]: { error: true } };
-            }
-        },
-        async fetchAllWeather() {
-            const items = this.currentItinerary;
-            if (!items || items.length === 0) return;
-            for (let i = 0; i < items.length; i++) {
-                if (i > 0) await new Promise(r => setTimeout(r, 1200));
-                await this.fetchWeatherForItem(items[i]);
-            }
-        },
-        getAllData() {
-            return JSON.stringify({ tripTitle: this.tripTitle, linkTripId: this.linkTripId, days: this.days, itineraries: this.itineraries, todos: this.todos, shoppingList: this.shoppingList, infoStation: this.infoStation, gasUrl: this.gasUrl, isTripLocked: this.isTripLocked });
-        },
-        saveToLocal() { localStorage.setItem('myTripAutoSave', this.getAllData()); },
-        loadFromLocal() {
-            const localData = localStorage.getItem('myTripAutoSave');
-            if (localData) this.restoreData(localData, true);
-        },
-        restoreData(jsonStr, silent = false) {
-            try {
-                const data = JSON.parse(jsonStr);
-                if (data.tripTitle !== undefined) this.tripTitle = data.tripTitle;
-                if (data.linkTripId !== undefined) this.linkTripId = data.linkTripId;
-                if (data.days) this.days = data.days;
-                if (data.itineraries) this.itineraries = data.itineraries;
-                if (data.todos) this.todos = data.todos;
-                if (data.shoppingList) this.shoppingList = data.shoppingList;
-                if (data.infoStation) this.infoStation = data.infoStation;
-                if (data.gasUrl !== undefined) this.gasUrl = data.gasUrl;
-                if (data.isTripLocked !== undefined) this.isTripLocked = data.isTripLocked;
-                if (!silent) alert('資料還原成功！');
-                if (this.dayViewMode === 'map') this.updateMapMarkers();
-                this.showSyncModal = false;
-            } catch (e) {
-                if (!silent) alert('資料格式錯誤，還原失敗。');
-            }
-        },
-                async copySyncCode() {
-            try {
-                await navigator.clipboard.writeText(this.getAllData());
-                alert('已複製完整行程代碼！您可至其他裝置貼上此代碼。');
-            } catch (e) {
-                alert('瀏覽器不支援自動複製，請改用檔案下載方式。');
-            }
-        },
-        async pasteSyncCode() {
-            try {
-                const text = await navigator.clipboard.readText();
-                if(text) this.restoreData(text);
-            } catch (e) {
-                const manualText = prompt('請手動貼上行程代碼：');
-                if(manualText) this.restoreData(manualText);
-            }
-        },
-        downloadJSON() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(this.getAllData());
-            const downloadNode = document.createElement('a');
-            downloadNode.setAttribute("href", dataStr);
-            downloadNode.setAttribute("download", this.tripTitle + "-備份.json");
-            document.body.appendChild(downloadNode);
-            downloadNode.click();
-            downloadNode.remove();
-        },
-        uploadJSON(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                this.restoreData(e.target.result);
-                event.target.value = ''; 
-            };
-            reader.readAsText(file);
-        },
-        async saveToCloud() {
-            if (!this.gasUrl.trim()) {
-                this.gasUrlError = true;
-                return;
-            }
-            this.isSyncing = true;
-            this.syncMessage = '正在上傳至雲端試算表...';
-            try {
-                const response = await fetch(this.gasUrl, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'save', sheetName: this.tripTitle, data: this.getAllData() }),
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-                });
-                const result = await response.json();
-                if (result.success) {
-                    this.syncSuccess = true;
-                    this.syncMessage = '雲端備份成功！';
-                } else {
-                    throw new Error(result.error);
-                }
-            } catch (error) {
-                this.syncSuccess = false;
-                this.syncMessage = '同步失敗：' + error.message;
-            } finally {
-                this.isSyncing = false;
-            }
-        },
-        createNewTrip() {
-            if(!confirm('建立新行程前，請確認您已將目前進度【備份至雲端】！\n\n確定要清空並建立嗎？')) return;
-            const newTitle = prompt('請輸入新行程名稱：', '我的全新旅程');
-            if(!newTitle) return;
-            this.tripTitle = newTitle;
-            this.days = [];
-            this.itineraries = {};
-            this.infoStation = { '資訊整理': [], '備用參考景點': [], '緊急醫療': [] };
-            this.currentTab = 'todo';
-            this.dayViewMode = 'list';
-            MapManager.clearMarkers();
-            if (!this.keepTemplates) {
-                this.todos = [];
-                this.shoppingList = [];
-            } else {
-                this.todos.forEach(t => t.done = false);
-                this.shoppingList.forEach(s => s.bought = false);
-            }
-            alert('✨ 已成功建立全新空白行程！');
-            this.showSyncModal = false;
-        },
-        async archiveToCloud() {
-            if (!this.gasUrl.trim()) {
-                this.gasUrlError = true;
-                return;
-            }
-            if (!confirm(`確定要封存「${this.tripTitle}」嗎？\n封存後，一般訪客將無法在雲端目錄中看到此行程。`)) return;
-            
-            this.isSyncing = true;
-            this.syncMessage = '正在封存雲端行程...';
-            try {
-                const response = await fetch(this.gasUrl, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'archive', sheetName: this.tripTitle }),
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-                });
-                const result = await response.json();
-                if (result.success) {
-                    this.syncSuccess = true;
-                    this.syncMessage = '雲端行程封存成功！';
-                    this.fetchCloudList(); // 重新讀取目錄以更新下拉選單
-                } else {
-                    throw new Error(result.error || '封存失敗');
-                }
-            } catch (error) {
-                this.syncSuccess = false;
-                this.syncMessage = '封存失敗：' + error.message;
-            } finally {
-                this.isSyncing = false;
-            }
-        },
-        async fetchCloudList() {
-            if (!this.gasUrl.trim()) {
-                this.gasUrlError = true;
-                return;
-            }
-            this.isSyncing = true;
-            this.syncMessage = '正在讀取雲端行程目錄...';
-            try {
-                const response = await fetch(this.gasUrl, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'list', isAdmin: !this.isTravelGuest }),
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-                });
-                const result = await response.json();
-                if (result.success && result.list) {
-                    this.cloudTrips = result.list;
-                    this.syncSuccess = true;
-                    this.syncMessage = '目錄讀取成功！請從下方選單選擇。';
-                } else {
-                    throw new Error(result.error || '無法讀取目錄，請確認網址或權限');
-                }
-            } catch (error) {
-                this.syncSuccess = false;
-                this.syncMessage = '目錄讀取失敗：' + error.message;
-            } finally {
-                this.isSyncing = false;
-            }
-        },
-        async loadSelectedCloudTrip() {
-            if (!this.selectedCloudTrip || !this.gasUrl) return;
-            this.isSyncing = true;
-            this.syncMessage = `正在下載「${this.selectedCloudTrip}」...`;
-            
-            // 移除可能帶有 [已封存] 的前綴，確保後端能讀到正確的工作表名稱
-            const actualSheetName = this.selectedCloudTrip.replace(/^\[已封存\]\s*/, '');
-            
-            try {
-                const response = await fetch(this.gasUrl, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'load', sheetName: actualSheetName }),
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-                });
-                const result = await response.json();
-                if (result.success && result.data) {
-                    this.restoreData(result.data);
-                    this.syncSuccess = true;
-                    this.syncMessage = '雲端行程讀取成功！';
-                } else {
-                    throw new Error(result.error || '讀取資料失敗');
-                }
-            } catch (error) {
-                this.syncSuccess = false;
-                this.syncMessage = '下載失敗：' + error.message;
-            } finally {
-                this.isSyncing = false;
-            }
-       }
-    }
-});
-
-vueAppInstance = appInstance.mount('#app');
+// 【新增前後辨識用：新增後3行】// Vue 實體與相關邏輯已抽離至 js/app.js
 
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -1512,6 +579,6 @@ vueAppInstance = appInstance.mount('#app');
         });
     }
 </script>
-
+<script src="./js/app.js"></script>
 </body>
 </html>
