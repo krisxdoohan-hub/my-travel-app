@@ -1,59 +1,26 @@
-
-
-
 @charset "UTF-8";
 
 /* ============================================================
-   RWD / 手機瀏覽器高度遮擋修正 (2026 更新版)
-   問題：舊版只用 100vh/100dvh，導致：
-   1. 登入畫面 #lock-screen 底部露出白色背景縫隙
-   2. Safari 工具列收合/展開動畫時，整體畫面跟著跳動，
-      造成功能列被裁掉、無法點擊
-   解法：改用「最小穩定視窗高度 svh」取代會浮動的 dvh，
-   並針對全螢幕遮罩層與 header 補上安全區域內距
+   RWD 修正 (v4 - 對齊已驗證可行的參考檔寫法)
+   不再跟 iOS 對抗：不用 vh/dvh/svh、不用 safe-area env()、
+   不用 viewport-fit=cover、不鎖 overflow:hidden。
+   讓瀏覽器用原生方式自己算高度，跟參考檔一致。
    ============================================================ */
 
-html, body {
-    height: 100%;
-    overscroll-behavior: none; /* 防止手機橡皮筋回彈觸發 Safari 工具列動畫，降低跳動機率 */
+body {
+    overscroll-behavior-y: none; /* 只擋垂直橡皮筋回彈，跟參考檔一致 */
 }
 
 .app-container {
-    height: 100vh; /* 極舊瀏覽器 fallback */
-    height: 100svh; /* 採用最小穩定視窗高度，避免 dvh 隨工具列動畫跳動導致功能列被裁切、卡死 */
-}
-
-/* 舊版 iOS Safari (不支援 svh) 專屬修正，確保仍能填滿畫面 */
-@supports (-webkit-touch-callout: none) {
-    html, body {
-        height: -webkit-fill-available;
-    }
-    .app-container {
-        height: -webkit-fill-available;
-    }
-}
-
-/* 全螢幕遮罩層（登入畫面 #lock-screen、載入動畫 #loading-overlay）
-   強制使用穩定視窗高度並補上底部安全區域內距，
-   確保無論 Safari 工具列如何動畫，遮罩永遠完整覆蓋到畫面最底部，
-   不再露出後方 body 的淺色背景（即「白色區域」問題） */
-#lock-screen,
-#loading-overlay {
-    height: 100vh;
-    height: 100svh;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-    box-sizing: border-box;
-}
-
-/* header 疊加頂部安全區域，避免瀏海/動態島機型遮擋日期上方的功能圖示列
-   用 header.bg-morandi-light 提高選擇器優先度以蓋過 Tailwind 的 pt-8，
-   不需修改 index.html 既有結構 */
-header.bg-morandi-light {
-    padding-top: calc(2rem + env(safe-area-inset-top, 0px)) !important;
+    min-height: 100vh; /* 用 min-height，內容多就自然往下延伸捲動，不強制鎖死一屏 */
 }
 
 nav {
-    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: 1rem;
+}
+
+input, textarea, select {
+    font-size: 16px !important; /* 保留：避免 iOS 輸入框字體過小觸發強制縮放 */
 }
 
 body { 
