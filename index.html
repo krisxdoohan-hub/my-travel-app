@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#7A9A74">
@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="隨身旅遊">
     <link rel="apple-touch-icon" href="./icon-192x192.png">
 
-    <title>日系極簡隨身旅遊App</title>
+    <title>日系極簡隨身旅遊</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
@@ -66,7 +66,7 @@
     <!-- 純 CSS 樣式則維持外部引入 -->
     <link rel="stylesheet" href="./css/main.css">
 </head>
-<body class="flex justify-center items-center h-screen w-screen overflow-hidden leading-relaxed">
+<body class="flex justify-center items-center w-screen overflow-hidden leading-relaxed app-container">
 
     <div id="loading-overlay" class="fixed inset-0 bg-black/60 z-[99999] hidden flex-col justify-center items-center text-white backdrop-blur-sm">
         <i class="fa-solid fa-spinner fa-spin text-4xl mb-4 text-morandi-light"></i>
@@ -369,8 +369,8 @@
         </button>
     </nav>
 
-    <div v-if="showShoppingModal" class="absolute inset-0 bg-black/40 z-[9999] flex items-end justify-center transition-all">
-        <div class="bg-[#FAF6EB] w-full rounded-t-[2.5rem] max-h-[80%] flex flex-col p-6 shadow-2xl animate-slide-up">
+    <div v-if="showShoppingModal" class="absolute inset-0 bg-black/40 z-[9999] flex items-start justify-center pt-[10vh] p-4 transition-all">
+        <div class="bg-[#FAF6EB] w-full max-w-sm rounded-3xl max-h-[80vh] flex flex-col p-6 shadow-2xl">
             <div class="flex justify-between items-center border-b border-gray-200 pb-4">
                 <h3 class="font-bold text-text-main flex items-center text-base">
                     <i class="fa-solid fa-basket-shopping text-morandi-dark mr-2"></i>代買購物清單
