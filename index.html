@@ -104,7 +104,7 @@
                         登入
                     </button>
                     <button onclick="handleFirebaseRegister()" class="flex-1 bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 rounded-xl transition duration-200 shadow-md active:scale-95 focus:outline-none">
-                        註冊
+                        註-冊
                     </button>
                 </div>
                 <p id="fb-error-msg" class="text-rose-400 text-xs text-center h-4 font-bold opacity-0 transition-opacity"></p>
@@ -151,19 +151,13 @@
                 <span class="text-[10px]">TODO</span>
             </div>
 
+            <!-- Tab 已完全淨化，僅保留純文字與乾淨的點擊功能 -->
             <div v-for="(day, index) in days" :key="'day-' + index + '-' + forceUpdateTabsKey" :data-index="index"
-                 @click="handleTabChange('day-' + index)"
+                 @click="handleDayTabClick(index)"
                  class="day-tab flex-shrink-0 relative flex flex-col items-center justify-center w-14 h-16 rounded-2xl cursor-pointer transition-all duration-300 shadow-sm"
                  :style="currentTab === 'day-' + index ? { backgroundColor: currentThemeColor, color: '#FAF6EB', fontWeight: '600' } : { backgroundColor: '#FAF6EB', color: '#737373', border: '1px solid #EAE3D2' }">
                 <span class="text-[9px] opacity-80 mb-0.5">Day {{ index + 1 }}</span>
-                <span class="text-xs font-bold flex items-center justify-center cursor-pointer group px-2 py-0.5 rounded transition-colors hover:bg-black/5"
-                      @click.stop="checkPermission('canManageDays') ? openEditDayModal(index) : null">
-                    {{ day.date }}
-                    <i v-if="checkPermission('canManageDays')" class="fa-solid fa-pen text-[8px] ml-1 opacity-40 group-hover:opacity-100 transition-opacity"></i>
-                </span>
-               <button v-if="currentTab === 'day-' + index && checkPermission('canManageDays')" @click.stop="deleteDay(index)" class="absolute -top-1 -right-1 bg-red-400 rounded-full w-4 h-4 flex items-center justify-center text-[10px] shadow-sm hover:bg-red-500 active:scale-90 transition-transform" style="color: white;">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+                <span class="text-xs font-bold">{{ day.date }}</span>
             </div>
 
             <div v-if="checkPermission('canManageDays')" @click="addNewDay" 
@@ -220,6 +214,19 @@
 
         <div v-if="currentTab.startsWith('day-')" class="space-y-4">
             
+            <!-- 新增：主內容區塊的專屬標題列 (點擊亦可喚出修改視窗) -->
+            <div class="card-container flex items-center justify-between cursor-pointer active:scale-95 transition-transform" 
+                 @click="checkPermission('canManageDays') ? openEditDayModal(currentDayIndex) : null"
+                 :style="{ borderLeft: '4px solid ' + currentThemeColor }">
+                <h2 class="text-base font-bold text-text-main flex items-center">
+                    <i class="fa-regular fa-calendar-check mr-2" :style="{ color: currentThemeColor }"></i>
+                    Day {{ currentDayIndex + 1 }}：{{ days[currentDayIndex] ? days[currentDayIndex].date : '' }}
+                </h2>
+                <button v-if="checkPermission('canManageDays')" class="btn-icon text-text-sub">
+                    <i class="fa-solid fa-pen text-sm"></i>
+                </button>
+            </div>
+
             <div class="card-container flex items-center justify-between">
                 <div class="space-y-1">
                     <h4 class="text-xs font-semibold text-text-sub tracking-wider">TODAY'S PROGRESS</h4>
@@ -385,6 +392,28 @@
             <span class="text-[10px]">隨身資訊</span>
         </button>
     </nav>
+
+    <!-- 新增：點擊作用中 Tab 喚出的底部動作選單 -->
+    <div v-if="showDayActionMenu" class="absolute inset-0 bg-black/40 z-[9999] flex items-end justify-center transition-all">
+        <div class="bg-[#FAF6EB] w-full max-w-md rounded-t-3xl p-6 pb-8 space-y-3 shadow-2xl transition-transform duration-300 transform translate-y-0">
+            <div class="flex justify-center mb-2">
+                <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+            </div>
+            <h3 class="font-bold text-text-main text-center text-base mb-4">Day {{ actionDayIndex + 1 }} 操作選單</h3>
+            
+            <button @click="triggerEditFromMenu" class="w-full bg-[#F4EFE6] text-text-main font-bold py-4 rounded-2xl flex items-center justify-center active:scale-95 transition-transform border border-gray-200">
+                <i class="fa-solid fa-pen mr-2 text-morandi-dark"></i> 修改日期
+            </button>
+            
+            <button @click="confirmDeleteDay" class="w-full bg-red-50 text-red-500 font-bold py-4 rounded-2xl flex items-center justify-center active:scale-95 transition-transform border border-red-100 mt-2">
+                <i class="fa-solid fa-trash-can mr-2"></i> 刪除此天數
+            </button>
+            
+            <button @click="showDayActionMenu = false" class="w-full bg-gray-200 text-text-sub font-bold py-4 rounded-2xl flex items-center justify-center active:scale-95 transition-transform mt-4">
+                <i class="fa-solid fa-xmark mr-2"></i> 取消
+            </button>
+        </div>
+    </div>
 
     <div v-if="showEditDayModal" class="absolute inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4">
         <div class="bg-[#FAF6EB] w-full max-w-sm rounded-3xl p-6 space-y-4 shadow-xl">
