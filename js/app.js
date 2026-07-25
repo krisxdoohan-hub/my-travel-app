@@ -95,7 +95,14 @@ const appInstance = createApp({
             loadingMapMsg: '',
 
             sortableInstance: null,
-            weatherCache: {}
+            weatherCache: {},
+            
+            // 新增：天數日期修改所需的變數
+            showEditDayModal: false,
+            editDayIndex: null,
+            editDayDate: '',
+            forceUpdateTabsKey: 0,
+            daysSortableInstance: null
         };
     },
     computed: {
@@ -171,6 +178,8 @@ const appInstance = createApp({
         // 修正：改用 getCurrentAccount()，避免讀取從未寫入過的 'currentUser' key
         const currentUser = getCurrentAccount();
         this.fetchUserPermissions(currentUser);
+        // 初始化上方天數頁籤的長按拖曳功能
+        this.initDaysSortable();
     },
 
 methods: {
@@ -287,6 +296,93 @@ methods: {
                 this.handleTabChange('todo');
             }
         },
+        
+        // 新增：打開編輯日期的彈出視窗
+        openEditDayModal(index) {
+            this.editDayIndex = index;
+            this.editDayDate = this.days[index].date;
+            this.showEditDayModal = true;
+        },
+        
+        // 新增：儲存修改後的日期
+        saveDayDate() {
+            if (!this.editDayDate.trim()) {
+                alert('日期不能為空');
+                return;
+            }
+            const oldDate = this.days[this.editDayIndex].date;
+            const newDate = this.editDayDate.trim();
+            if (oldDate !== newDate) {
+                this.days[this.editDayIndex].date = newDate;
+                this.sysLogAction('修改天數日期', { dayIndex: this.editDayIndex + 1, oldDate: oldDate, newDate: newDate });
+            }
+            this.showEditDayModal = false;
+        },
+        
+        // 新增：初始化上方天數 Tabs 的長按拖曳排序機制
+        initDaysSortable() {
+            this.$nextTick(() => {
+                const el = this.$refs.tabsContainer;
+                if (!el) return;
+                
+                if (this.daysSortableInstance) {
+                    this.daysSortableInstance.destroy();
+                }
+                
+                this.daysSortableInstance = Sortable.create(el, {
+                    draggable: '.day-tab',
+                    delay: 500, // 長按 0.5 秒才會觸發，防止滑動誤觸 (Option A)
+                    delayOnTouchOnly: true, // 僅手機觸控生效長按，電腦端可直接拖
+                    animation: 150,
+                    onEnd: (evt) => {
+                        const oldDOMIdx = evt.oldIndex;
+                        const newDOMIdx = evt.newIndex;
+                        if (oldDOMIdx === newDOMIdx) return;
+
+                        // 取出拖曳過後，畫面上全部天數標籤的原始索引陣列
+                        const tabs = Array.from(el.querySelectorAll('.day-tab'));
+                        const newOrderIndices = tabs.map(tab => parseInt(tab.dataset.index));
+
+                        // 暫存修改前的資料
+                        const oldDays = [...this.days];
+                        const oldItineraries = { ...this.itineraries };
+
+                        // 準備裝載新資料的容器
+                        const newDays = [];
+                        const newItineraries = {};
+                        
+                        let oldCurrentDayIdx = this.currentDayIndex;
+                        let newCurrentDayIdx = oldCurrentDayIdx;
+
+                        // 依照新的排序順序，重組 Days 陣列與 Itineraries 物件
+                        newOrderIndices.forEach((originalIndex, newIndex) => {
+                            newDays.push(oldDays[originalIndex]);
+                            newItineraries[newIndex] = oldItineraries[originalIndex] || [];
+                            
+                            // 若目前所在的視圖頁籤剛好被移動，需記錄它被換到了哪裡
+                            if (oldCurrentDayIdx === originalIndex) {
+                                newCurrentDayIdx = newIndex;
+                            }
+                        });
+
+                        // 寫回 Vue 的資料響應屬性中
+                        this.days = newDays;
+                        this.itineraries = newItineraries;
+                        
+                        // 若所在天數被移動了，連帶修正 currentTab 指向新的位址，避免畫面卡住
+                        if (oldCurrentDayIdx !== null && oldCurrentDayIdx !== newCurrentDayIdx) {
+                            this.currentTab = 'day-' + newCurrentDayIdx;
+                        }
+
+                        this.sysLogAction('調整行程天數順序', { oldIndex: oldDOMIdx, newIndex: newDOMIdx });
+                        
+                        // 強制 Vue 重新繪製迴圈，使虛擬 DOM 與 Sortable 改變過的實體 DOM 同步對齊
+                        this.forceUpdateTabsKey = Date.now();
+                    }
+                });
+            });
+        },
+        
         editTitle() {
             this.isEditingTitle = true;
             this.$nextTick(() => { this.$refs.titleInput.focus(); });
@@ -522,6 +618,9 @@ methods: {
                 if (!silent) {
                     this.sysLogAction('匯入/還原紀錄檔', { type: '手動還原', projectName: this.tripTitle });
                 }
+                
+                // 確保還原覆蓋資料後，若有天數，Sortable 仍保持綁定正常
+                this.initDaysSortable();
             } catch (e) {
                 if (!silent) alert('資料格式錯誤，還原失敗。');
             }
