@@ -97,12 +97,15 @@ const appInstance = createApp({
             sortableInstance: null,
             weatherCache: {},
             
-            // 新增：天數日期修改所需的變數
             showEditDayModal: false,
             editDayIndex: null,
             editDayDate: '',
             forceUpdateTabsKey: 0,
-            daysSortableInstance: null
+            daysSortableInstance: null,
+            
+            // 新增：底部動作選單所需的變數
+            showDayActionMenu: false,
+            actionDayIndex: null
         };
     },
     computed: {
@@ -242,6 +245,20 @@ methods: {
             }
         },
 
+        // 新增：處理天數 Tab 的綜合點擊邏輯 (切換 vs 喚出動作選單)
+        handleDayTabClick(index) {
+            if (this.currentTab === 'day-' + index) {
+                // 若點擊的已經是目前正在瀏覽的天數，且有管理權限，則喚出底部動作選單
+                if (this.checkPermission('canManageDays')) {
+                    this.actionDayIndex = index;
+                    this.showDayActionMenu = true;
+                }
+            } else {
+                // 若點擊其他天數，則單純進行頁面切換
+                this.handleTabChange('day-' + index);
+            }
+        },
+
         handleTabChange(tabName) {
             this.currentTab = tabName;
             this.sysLogAction('切換頁籤', { tab: tabName });
@@ -284,6 +301,14 @@ methods: {
                 this.handleTabChange('day-' + newIndex);
             }
         },
+        
+        // 新增：從底部動作選單觸發的刪除確認機制
+        confirmDeleteDay() {
+            const index = this.actionDayIndex;
+            this.showDayActionMenu = false; // 關閉選單
+            this.deleteDay(index); // 呼叫原本的刪除邏輯
+        },
+
         deleteDay(index) {
             if(confirm(`確定要刪除 Day ${index + 1} (${this.days[index].date}) 以及裡面的所有行程嗎？`)) {
                 this.days.splice(index, 1);
@@ -297,14 +322,21 @@ methods: {
             }
         },
         
-        // 新增：打開編輯日期的彈出視窗
+        // 新增：從底部動作選單觸發開啟修改日期視窗
+        triggerEditFromMenu() {
+            const index = this.actionDayIndex;
+            this.showDayActionMenu = false;
+            this.openEditDayModal(index);
+        },
+
+        // 打開編輯日期的彈出視窗
         openEditDayModal(index) {
             this.editDayIndex = index;
             this.editDayDate = this.days[index].date;
             this.showEditDayModal = true;
         },
         
-        // 新增：儲存修改後的日期
+        // 儲存修改後的日期
         saveDayDate() {
             if (!this.editDayDate.trim()) {
                 alert('日期不能為空');
@@ -319,7 +351,7 @@ methods: {
             this.showEditDayModal = false;
         },
         
-        // 新增：初始化上方天數 Tabs 的長按拖曳排序機制
+        // 初始化上方天數 Tabs 的長按拖曳排序機制
         initDaysSortable() {
             this.$nextTick(() => {
                 const el = this.$refs.tabsContainer;
