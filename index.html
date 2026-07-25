@@ -104,7 +104,7 @@
                         登入
                     </button>
                     <button onclick="handleFirebaseRegister()" class="flex-1 bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 rounded-xl transition duration-200 shadow-md active:scale-95 focus:outline-none">
-                        註-冊
+                        註冊
                     </button>
                 </div>
                 <p id="fb-error-msg" class="text-rose-400 text-xs text-center h-4 font-bold opacity-0 transition-opacity"></p>
@@ -151,9 +151,9 @@
                 <span class="text-[10px]">TODO</span>
             </div>
 
-            <!-- Tab 已完全淨化，僅保留純文字與乾淨的點擊功能 -->
+            <!-- 修改：Tab 完全回歸純淨功能，只負責切換與長按拖曳，移除額外按鈕 -->
             <div v-for="(day, index) in days" :key="'day-' + index + '-' + forceUpdateTabsKey" :data-index="index"
-                 @click="handleDayTabClick(index)"
+                 @click="handleTabChange('day-' + index)"
                  class="day-tab flex-shrink-0 relative flex flex-col items-center justify-center w-14 h-16 rounded-2xl cursor-pointer transition-all duration-300 shadow-sm"
                  :style="currentTab === 'day-' + index ? { backgroundColor: currentThemeColor, color: '#FAF6EB', fontWeight: '600' } : { backgroundColor: '#FAF6EB', color: '#737373', border: '1px solid #EAE3D2' }">
                 <span class="text-[9px] opacity-80 mb-0.5">Day {{ index + 1 }}</span>
@@ -214,9 +214,9 @@
 
         <div v-if="currentTab.startsWith('day-')" class="space-y-4">
             
-            <!-- 新增：主內容區塊的專屬標題列 (點擊亦可喚出修改視窗) -->
+            <!-- 修改：將原本的編輯按鈕改為直接觸發喚出底部動作選單 openDayActionMenu -->
             <div class="card-container flex items-center justify-between cursor-pointer active:scale-95 transition-transform" 
-                 @click="checkPermission('canManageDays') ? openEditDayModal(currentDayIndex) : null"
+                 @click="checkPermission('canManageDays') ? openDayActionMenu(currentDayIndex) : null"
                  :style="{ borderLeft: '4px solid ' + currentThemeColor }">
                 <h2 class="text-base font-bold text-text-main flex items-center">
                     <i class="fa-regular fa-calendar-check mr-2" :style="{ color: currentThemeColor }"></i>
@@ -393,7 +393,7 @@
         </button>
     </nav>
 
-    <!-- 新增：點擊作用中 Tab 喚出的底部動作選單 -->
+    <!-- 點擊作用中 Tab 喚出的底部動作選單 -->
     <div v-if="showDayActionMenu" class="absolute inset-0 bg-black/40 z-[9999] flex items-end justify-center transition-all">
         <div class="bg-[#FAF6EB] w-full max-w-md rounded-t-3xl p-6 pb-8 space-y-3 shadow-2xl transition-transform duration-300 transform translate-y-0">
             <div class="flex justify-center mb-2">
