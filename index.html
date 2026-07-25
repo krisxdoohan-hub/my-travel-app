@@ -151,12 +151,16 @@
                 <span class="text-[10px]">TODO</span>
             </div>
 
-            <div v-for="(day, index) in days" :key="index" 
+            <div v-for="(day, index) in days" :key="'day-' + index + '-' + forceUpdateTabsKey" :data-index="index"
                  @click="handleTabChange('day-' + index)"
-                 class="flex-shrink-0 relative flex flex-col items-center justify-center w-14 h-16 rounded-2xl cursor-pointer transition-all duration-300 shadow-sm"
+                 class="day-tab flex-shrink-0 relative flex flex-col items-center justify-center w-14 h-16 rounded-2xl cursor-pointer transition-all duration-300 shadow-sm"
                  :style="currentTab === 'day-' + index ? { backgroundColor: currentThemeColor, color: '#FAF6EB', fontWeight: '600' } : { backgroundColor: '#FAF6EB', color: '#737373', border: '1px solid #EAE3D2' }">
                 <span class="text-[9px] opacity-80 mb-0.5">Day {{ index + 1 }}</span>
-                <span class="text-xs font-bold">{{ day.date }}</span>
+                <span class="text-xs font-bold flex items-center justify-center cursor-pointer group px-2 py-0.5 rounded transition-colors hover:bg-black/5"
+                      @click.stop="checkPermission('canManageDays') ? openEditDayModal(index) : null">
+                    {{ day.date }}
+                    <i v-if="checkPermission('canManageDays')" class="fa-solid fa-pen text-[8px] ml-1 opacity-40 group-hover:opacity-100 transition-opacity"></i>
+                </span>
                <button v-if="currentTab === 'day-' + index && checkPermission('canManageDays')" @click.stop="deleteDay(index)" class="absolute -top-1 -right-1 bg-red-400 rounded-full w-4 h-4 flex items-center justify-center text-[10px] shadow-sm hover:bg-red-500 active:scale-90 transition-transform" style="color: white;">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
@@ -381,6 +385,22 @@
             <span class="text-[10px]">隨身資訊</span>
         </button>
     </nav>
+
+    <div v-if="showEditDayModal" class="absolute inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4">
+        <div class="bg-[#FAF6EB] w-full max-w-sm rounded-3xl p-6 space-y-4 shadow-xl">
+            <h3 class="font-bold text-text-main text-base">修改 Day {{ editDayIndex + 1 }} 日期</h3>
+            <div class="space-y-4 text-xs">
+                <div>
+                    <label class="block text-text-sub mb-2 font-medium">請輸入新日期</label>
+                    <input type="text" v-model="editDayDate" @keyup.enter="saveDayDate" placeholder="例如：10/25 或 第1天" class="input-field w-full">
+                </div>
+            </div>
+            <div class="flex space-x-4 text-xs pt-4">
+                <button @click="showEditDayModal = false" class="btn-secondary flex-1 border-gray-200 text-text-sub hover:bg-gray-100">取消</button>
+                <button @click="saveDayDate" class="btn-primary flex-1">儲存</button>
+            </div>
+        </div>
+    </div>
 
     <div v-if="showShoppingModal" class="absolute inset-0 bg-black/40 z-[9999] flex items-start justify-center pt-[10vh] p-4 transition-all">
         <div class="bg-[#FAF6EB] w-full max-w-sm rounded-3xl max-h-[80vh] flex flex-col p-6 shadow-2xl">
