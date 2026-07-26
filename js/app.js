@@ -603,10 +603,19 @@ methods: {
             if (!currentLoc) return;
             this.sysLogAction('開啟外部導航', { location: currentLoc });
             let url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(currentLoc)}`;
+            
             if (idx > 0) {
-                const prevLoc = this.currentItinerary[idx - 1].location;
-                if (prevLoc) {
-                    url += `&origin=${encodeURIComponent(prevLoc)}`;
+                let prevIdx = idx - 1;
+                // 往回尋找，若分類為「交通方式」或已勾選完成，則排除跳過，直到找到非交通方式且未完成的景點
+                while (prevIdx >= 0 && (this.currentItinerary[prevIdx].category === '交通方式' || this.currentItinerary[prevIdx].completed)) {
+                    prevIdx--;
+                }
+                
+                if (prevIdx >= 0) {
+                    const prevLoc = this.currentItinerary[prevIdx].location;
+                    if (prevLoc) {
+                        url += `&origin=${encodeURIComponent(prevLoc)}`;
+                    }
                 }
             }
             window.open(url, '_blank');
