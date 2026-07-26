@@ -55,12 +55,17 @@ const appInstance = createApp({
             ],
             newTodoText: '',
             todoError: false,
+            editingTodoIndex: null,
+            editingTodoText: '',
+            
             showShoppingModal: false,
             shoppingList: [
                 { text: '合利他命 EX Plus * 2', bought: false },
                 { text: '純米大吟釀 地酒 * 1', bought: false }
             ],
             newShoppingItem: '',
+            editingShoppingIndex: null,
+            editingShoppingText: '',
 
             showSyncModal: false,
             gasUrl: '',
@@ -443,7 +448,7 @@ methods: {
             });
         },
         getCategoryIcon(cat) {
-            const icons = { '景點': '⛩️', '住宿': '🏨', '交通': '🚇', '航班': '✈️', '美食': '🍜', '購物': '🛍️', '其他': '📍' };
+            const icons = { '景點': '⛩️', '住宿': '🏨', '車站': '🚉', '交通': '🚇', '機場': '🛫', '港口': '🚢', '航班': '✈️', '餐廳': '🍽️', '美食': '🍜', '購物': '🛍️', '其他': '📍' };
             return icons[cat] || '📍';
         },
         addTodo() {
@@ -461,6 +466,20 @@ methods: {
             this.todos.splice(idx, 1);
             this.sysLogAction('刪除待辦', { text: deletedItem.text });
         },
+        startEditTodo(idx) {
+            this.editingTodoIndex = idx;
+            this.editingTodoText = this.todos[idx].text;
+        },
+        saveTodoEdit(idx) {
+            if (!this.editingTodoText.trim()) return;
+            const oldText = this.todos[idx].text;
+            this.todos[idx].text = this.editingTodoText.trim();
+            this.editingTodoIndex = null;
+            this.sysLogAction('編輯待辦', { oldText: oldText, newText: this.todos[idx].text });
+        },
+        cancelTodoEdit() {
+            this.editingTodoIndex = null;
+        },
        addShoppingItem() {
             if (this.newShoppingItem.trim()) {
                 this.shoppingList.push({ text: this.newShoppingItem.trim(), bought: false });
@@ -472,6 +491,20 @@ methods: {
             const deletedItem = this.shoppingList[idx];
             this.shoppingList.splice(idx, 1);
             this.sysLogAction('刪除購物項目', { text: deletedItem.text });
+        },
+        startEditShopping(idx) {
+            this.editingShoppingIndex = idx;
+            this.editingShoppingText = this.shoppingList[idx].text;
+        },
+        saveShoppingEdit(idx) {
+            if (!this.editingShoppingText.trim()) return;
+            const oldText = this.shoppingList[idx].text;
+            this.shoppingList[idx].text = this.editingShoppingText.trim();
+            this.editingShoppingIndex = null;
+            this.sysLogAction('編輯購物項目', { oldText: oldText, newText: this.shoppingList[idx].text });
+        },
+        cancelShoppingEdit() {
+            this.editingShoppingIndex = null;
         },
         getInfoCatIcon(cat) {
             if (cat === '資訊整理') return 'fa-solid fa-folder-open text-teal-600';
