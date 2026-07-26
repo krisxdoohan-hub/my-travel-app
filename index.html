@@ -274,23 +274,30 @@
             <div v-if="dayViewMode === 'list'" class="space-y-4" ref="itineraryList">
                 <div v-for="(item, idx) in currentItinerary" :key="item.id || idx" 
                      class="itinerary-item card-container relative flex flex-col"
-                     :class="{'bg-[#F4EFE6] border-dashed opacity-70': item.completed}">
+                     :class="{'bg-[#F4EFE6] border-dashed opacity-70': item.completed}"
+                     :style="!item.completed && item.category === '交通方式' ? 'background-color: #EAF0EA; border-color: #7A9A74;' : (!item.completed && item.category === '備選餐廳' ? 'background-color: #EFEAF4; border-color: #9374C5;' : '')">
                     
                     <div class="flex items-start justify-between">
                         <div class="flex items-center space-x-4">
                             <input type="checkbox" v-model="item.completed" class="w-4 h-4 rounded text-morandi focus:ring-morandi border-gray-300">
-                            <span class="text-xs px-2 py-1 rounded-full border" :style="{ backgroundColor: currentThemeColorLight, color: currentThemeColor, borderColor: currentThemeColor }">
+                            <span class="text-xs px-2 py-1 rounded-full border" 
+                                  :style="!item.completed && item.category === '交通方式' ? { backgroundColor: '#7A9A74', color: '#FAF6EB', borderColor: '#7A9A74' } : (!item.completed && item.category === '備選餐廳' ? { backgroundColor: '#9374C5', color: '#FAF6EB', borderColor: '#9374C5' } : { backgroundColor: currentThemeColorLight, color: currentThemeColor, borderColor: currentThemeColor })">
                                 {{ getCategoryIcon(item.category) }} {{ item.category }}
                             </span>
                         </div>
 
-                        <div class="drag-handle cursor-move text-gray-300 hover:text-morandi-dark p-2 transition active:scale-90 touch-none">
+                        <!-- 修正：當 completed 為 true 時，拔除 drag-handle 類別以防止 Sortable.js 拖曳，並加上反灰與禁用的視覺效果 -->
+                        <div class="p-2 transition touch-none" 
+                             :class="item.completed 
+                                 ? 'opacity-30 cursor-not-allowed text-gray-400' 
+                                 : 'drag-handle cursor-move active:scale-90 text-gray-300 hover:text-morandi-dark'">
                             <i class="fa-solid fa-grip-lines text-base"></i>
                         </div>
                     </div>
 
                     <div class="mt-2 pl-8">
-                        <h3 class="text-base font-bold text-text-main flex items-center flex-wrap gap-2" :class="{'line-through text-text-sub': item.completed}">
+                        <h3 class="text-base font-bold flex items-center flex-wrap gap-2" 
+                            :class="{'line-through text-text-sub': item.completed, 'text-text-main': !item.completed}">
                             {{ item.location }}
                             <template v-if="!isTravelGuest">
                                 <span v-if="weatherCache[item.location] && weatherCache[item.location].loading" class="text-xs font-normal text-text-sub bg-gray-100 px-2 py-1 rounded-full flex items-center">
@@ -302,23 +309,42 @@
                                 <span v-else-if="weatherCache[item.location] && weatherCache[item.location].error" class="text-xs font-normal text-text-sub bg-gray-100 px-2 py-1 rounded-full flex items-center" title="無法取得天氣">
                                     <i class="fa-solid fa-cloud-slash mr-1 text-gray-400 text-[10px]"></i>--
                                 </span>
-                                <span v-else @click.stop="fetchWeatherForItem(item)" class="text-xs font-normal text-text-sub bg-gray-100 px-2 py-1 rounded-full flex items-center cursor-pointer hover:bg-[#EAE3D2] active:scale-95 transition">
-                                    <i class="fa-solid fa-cloud-sun mr-1 text-amber-500 text-[10px]"></i>查詢天氣
+                                <!-- 修正：當 completed 為 true 時，傳遞 null 阻斷事件，並套用禁用樣式與灰色圖示 -->
+                                <span v-else @click.stop="!item.completed ? fetchWeatherForItem(item) : null" 
+                                      class="text-xs font-normal text-text-sub bg-gray-100 px-2 py-1 rounded-full flex items-center transition"
+                                      :class="item.completed ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-[#EAE3D2] active:scale-95'">
+                                    <i class="fa-solid fa-cloud-sun mr-1 text-[10px]" :class="item.completed ? 'text-gray-400' : 'text-amber-500'"></i>查詢天氣
                                 </span>
                             </template>
                         </h3>
-                        <p v-if="item.notes" class="text-xs text-text-sub mt-2 whitespace-pre-wrap bg-[#F4EFE6] p-2 rounded-lg border border-gray-100">
+                        <p v-if="item.notes" class="text-xs mt-2 whitespace-pre-wrap p-2 rounded-lg border text-text-sub bg-[#F4EFE6] border-gray-100">
                             <i class="fa-regular fa-sticky-note mr-2 opacity-60"></i>{{ item.notes }}
                         </p>
                     </div>
 
                     <div class="flex justify-between items-center mt-4 pt-2 border-t border-gray-100 pl-8">
-                        <button @click="openExternalNav(idx)" class="btn-icon flex items-center font-medium text-xs">
+                        
+                        <!-- 修正：加入 :disabled="item.completed"，並改寫 :class 讓鎖定時呈現反灰狀態 -->
+                        <button @click="openExternalNav(idx)" :disabled="item.completed"
+                                class="flex items-center font-medium text-xs transition-all duration-200"
+                                :class="item.completed ? 'opacity-50 cursor-not-allowed text-gray-400' : 'active:scale-90 text-morandi-dark hover:text-morandi-deep'">
                             <i class="fa-solid fa-diamond-turn-right mr-1 text-xs"></i>導航
                         </button>
-                        <div v-if="checkPermission('canManageItinerary')" class="flex space-x-4 text-xs text-text-sub">
-                            <button @click="openEditModal(idx)" class="btn-icon"><i class="fa-solid fa-pen-to-square mr-1"></i>編輯</button>
-                            <button @click="deleteItineraryItem(idx)" class="btn-icon hover:text-red-400"><i class="fa-solid fa-trash-can mr-1"></i>刪除</button>
+                        
+                        <div v-if="checkPermission('canManageItinerary')" class="flex space-x-4 text-xs">
+                            <!-- 修正：加入 :disabled="item.completed"，並改寫 :class 讓鎖定時呈現反灰狀態 -->
+                            <button @click="openEditModal(idx)" :disabled="item.completed"
+                                    class="transition-all duration-200"
+                                    :class="item.completed ? 'opacity-50 cursor-not-allowed text-gray-400' : 'active:scale-90 text-text-sub hover:text-morandi-dark'">
+                                <i class="fa-solid fa-pen-to-square mr-1"></i>編輯
+                            </button>
+                            
+                            <!-- 修正：加入 :disabled="item.completed"，並改寫 :class 讓鎖定時呈現反灰狀態 -->
+                            <button @click="deleteItineraryItem(idx)" :disabled="item.completed"
+                                    class="transition-all duration-200"
+                                    :class="item.completed ? 'opacity-50 cursor-not-allowed text-gray-400' : 'active:scale-90 text-text-sub hover:text-red-400'">
+                                <i class="fa-solid fa-trash-can mr-1"></i>刪除
+                            </button>
                         </div>
                     </div>
                 </div>
