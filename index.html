@@ -380,11 +380,15 @@
                 <div class="space-y-2">
                     <div v-for="(info, iIdx) in cat" :key="iIdx" class="bg-[#F4EFE6] p-4 rounded-xl relative group" :class="{'opacity-60': info.done}">
                         <div class="flex justify-between items-start">
-                            <label class="flex items-start space-x-3 cursor-pointer flex-1">
+                            <!-- 新增 min-w-0 防止 flex-1 寬度撐破邊界 -->
+                            <label class="flex items-start space-x-3 cursor-pointer flex-1 min-w-0">
                                 <input type="checkbox" v-model="info.done" class="w-4 h-4 rounded text-morandi focus:ring-morandi border-gray-300 mt-0.5 flex-shrink-0">
-                                <div class="flex-1">
-                                    <h4 class="text-xs font-bold text-text-main" :class="{'line-through text-text-sub': info.done}">{{ info.title }}</h4>
-                                    <p class="text-xs text-text-sub mt-1 whitespace-pre-wrap" :class="{'line-through': info.done}">{{ info.content }}</p>
+                                <!-- 新增 min-w-0 讓內部文字能夠正確計算縮排空間 -->
+                                <div class="flex-1 min-w-0">
+                                    <!-- 新增 break-words 強制長字串或網址斷行 -->
+                                    <h4 class="text-xs font-bold text-text-main break-words" :class="{'line-through text-text-sub': info.done}">{{ info.title }}</h4>
+                                    <!-- 新增 break-words 強制長字串或網址斷行 -->
+                                    <p class="text-xs text-text-sub mt-1 whitespace-pre-wrap break-words" :class="{'line-through': info.done}">{{ info.content }}</p>
                                 </div>
                             </label>
                             <div v-if="checkPermission('canManageInfo')" class="flex space-x-3 ml-2 flex-shrink-0">
