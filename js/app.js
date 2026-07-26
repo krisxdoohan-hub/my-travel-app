@@ -83,7 +83,9 @@ const appInstance = createApp({
                 '緊急醫療': []
             },
             showInfoModal: false,
-            infoModalData: { category: '資訊整理', title: '', content: '' },
+            infoModalData: { category: '資訊整理', title: '', content: '', done: false },
+            infoModalMode: 'add',
+            editingInfoIndex: { category: '', index: null },
 
             showItineraryModal: false,
             modalMode: 'add',
@@ -477,16 +479,41 @@ methods: {
             return 'fa-solid fa-heart-pulse text-red-500';
         },
         openAddInfoModal() {
-            this.infoModalData = { category: '資訊整理', title: '', content: '' };
+            this.infoModalMode = 'add';
+            this.infoModalData = { category: '資訊整理', title: '', content: '', done: false };
             this.showInfoModal = true;
         },
-   saveInfoItem() {
+        openEditInfoModal(category, index) {
+            this.infoModalMode = 'edit';
+            this.editingInfoIndex = { category, index };
+            const item = this.infoStation[category][index];
+            this.infoModalData = {
+                category: category,
+                title: item.title,
+                content: item.content,
+                done: item.done || false
+            };
+            this.showInfoModal = true;
+        },
+        saveInfoItem() {
             if (this.infoModalData.title && this.infoModalData.content) {
-                this.infoStation[this.infoModalData.category].push({
-                    title: this.infoModalData.title,
-                    content: this.infoModalData.content
-                });
-                this.sysLogAction('新增隨身資訊', { category: this.infoModalData.category, title: this.infoModalData.title });
+                if (this.infoModalMode === 'add') {
+                    this.infoStation[this.infoModalData.category].push({
+                        title: this.infoModalData.title,
+                        content: this.infoModalData.content,
+                        done: false
+                    });
+                    this.sysLogAction('新增隨身資訊', { category: this.infoModalData.category, title: this.infoModalData.title });
+                } else if (this.infoModalMode === 'edit') {
+                    const cat = this.editingInfoIndex.category;
+                    const idx = this.editingInfoIndex.index;
+                    this.infoStation[cat][idx] = {
+                        title: this.infoModalData.title,
+                        content: this.infoModalData.content,
+                        done: this.infoModalData.done
+                    };
+                    this.sysLogAction('編輯隨身資訊', { category: cat, title: this.infoModalData.title });
+                }
                 this.showInfoModal = false;
             }
         },
