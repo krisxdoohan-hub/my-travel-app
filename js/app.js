@@ -257,6 +257,7 @@ methods: {
         handleTabChange(tabName) {
             this.currentTab = tabName;
             this.sysLogAction('切換頁籤', { tab: tabName });
+            
             if (tabName.startsWith('day-')) {
                 if (this.dayViewMode === 'map') {
                     this.initMap();
@@ -264,7 +265,20 @@ methods: {
                     this.initSortable();
                 }
             } else {
+                // 非天數頁籤時，先中止地圖任務
                 MapManager.abortCurrentTasks();
+                
+                // 若切換到天氣頁籤，則傳遞純淨資料啟動天氣系統
+                if (tabName === 'weather') {
+                    setTimeout(() => {
+                        if (window.WeatherManager) {
+                            // 使用 JSON 深拷貝徹底解除 Vue Proxy 外殼，給 weather.js 最純淨的物件與陣列
+                            const pureItineraries = JSON.parse(JSON.stringify(this.itineraries));
+                            const pureDays = JSON.parse(JSON.stringify(this.days));
+                            window.WeatherManager.initWeatherView(pureItineraries, pureDays);
+                        }
+                    }, 50);
+                }
             }
         },
 
