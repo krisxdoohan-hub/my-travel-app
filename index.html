@@ -299,23 +299,6 @@
                         <h3 class="text-base font-bold flex items-center flex-wrap gap-2" 
                             :class="{'line-through text-text-sub': item.completed, 'text-text-main': !item.completed}">
                             {{ item.location }}
-                            <template v-if="!isTravelGuest">
-                                <span v-if="weatherCache[item.location] && weatherCache[item.location].loading" class="text-xs font-normal text-text-sub bg-gray-100 px-2 py-1 rounded-full flex items-center">
-                                    <i class="fa-solid fa-spinner fa-spin text-[10px] mr-1 text-morandi-dark"></i>查詢天氣中...
-                                </span>
-                                <span v-else-if="weatherCache[item.location] && weatherCache[item.location].temp" class="text-xs font-normal text-text-sub bg-[#EAE3D2] px-2 py-1 rounded-full flex items-center border border-gray-200" :title="weatherCache[item.location].desc">
-                                    <span class="mr-1 text-[11px]">{{ weatherCache[item.location].icon }}</span>{{ weatherCache[item.location].temp }}
-                                </span>
-                                <span v-else-if="weatherCache[item.location] && weatherCache[item.location].error" class="text-xs font-normal text-text-sub bg-gray-100 px-2 py-1 rounded-full flex items-center" title="無法取得天氣">
-                                    <i class="fa-solid fa-cloud-slash mr-1 text-gray-400 text-[10px]"></i>--
-                                </span>
-                                <!-- 修正：當 completed 為 true 時，傳遞 null 阻斷事件，並套用禁用樣式與灰色圖示 -->
-                                <span v-else @click.stop="!item.completed ? fetchWeatherForItem(item) : null" 
-                                      class="text-xs font-normal text-text-sub bg-gray-100 px-2 py-1 rounded-full flex items-center transition"
-                                      :class="item.completed ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-[#EAE3D2] active:scale-95'">
-                                    <i class="fa-solid fa-cloud-sun mr-1 text-[10px]" :class="item.completed ? 'text-gray-400' : 'text-amber-500'"></i>查詢天氣
-                                </span>
-                            </template>
                         </h3>
                         <p v-if="item.notes" class="text-xs mt-2 whitespace-pre-wrap p-2 rounded-lg border text-text-sub bg-[#F4EFE6] border-gray-100">
                             <i class="fa-regular fa-sticky-note mr-2 opacity-60"></i>{{ item.notes }}
@@ -354,9 +337,6 @@
                 <button v-if="checkPermission('canManageItinerary')" @click="openAddModal" class="w-full py-4 border-2 border-dashed rounded-2xl text-sm font-medium active:scale-95 transition-transform flex items-center justify-center space-x-2 hover:opacity-80"
                         :style="{ borderColor: currentThemeColor, color: currentThemeColor, backgroundColor: '#FAF6EB' }">
                     <i class="fa-solid fa-plus-circle"></i> <span>新增行程目的地</span>
-                </button>
-                <button @click="fetchAllWeather" v-if="currentItinerary.length > 0 && !isTravelGuest" class="btn-secondary w-full py-4 text-xs">
-                    <i class="fa-solid fa-cloud-sun mr-2"></i> <span>一鍵更新今日所有景點天氣</span>
                 </button>
             </div>
 
@@ -436,6 +416,28 @@
             </div>
         </div>
 
+        <!-- 天氣總覽視圖 -->
+        <div v-show="currentTab === 'weather'" class="space-y-4 pb-10" id="weather-view-container">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-2">
+                <h2 class="text-base font-bold text-text-main flex items-center">
+                    <i class="fa-solid fa-cloud-sun mr-2 text-morandi-dark"></i>全區天氣總覽
+                </h2>
+            </div>
+            
+            <!-- 天氣地點標籤列 (由 weather.js 動態生成) -->
+            <div id="weather-location-tabs" class="flex space-x-3 overflow-x-auto hide-scrollbar pb-3 pt-1">
+                <!-- JS 動態注入 -->
+            </div>
+
+            <!-- 天氣詳細內容卡片 (由 weather.js 動態生成) -->
+            <div id="weather-forecast-content" class="mt-2 min-h-[300px]">
+                <div class="text-center text-xs text-text-sub py-8">
+                    <i class="fa-solid fa-spinner fa-spin text-2xl text-morandi mb-2"></i>
+                    <p>正在分析行程與載入天氣資訊...</p>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <nav class="absolute bottom-0 w-full bg-[#FAF6EB] border-t border-gray-200 flex justify-around pt-2 pb-4 z-30 shadow-lg">
@@ -443,6 +445,12 @@
             <i class="fa-solid fa-calendar-alt text-base mb-0.5"></i>
             <span class="text-[10px]">日常行程</span>
         </button>
+        
+        <button @click="handleTabChange('weather')" class="flex flex-col items-center btn-icon" :class="currentTab === 'weather' ? 'text-morandi-dark font-semibold' : 'text-text-sub'">
+            <i class="fa-solid fa-cloud-sun text-base mb-0.5"></i>
+            <span class="text-[10px]">天氣預報</span>
+        </button>
+
         <button @click="handleTabChange('info')" class="flex flex-col items-center btn-icon" :class="currentTab === 'info' ? 'text-morandi-dark font-semibold' : 'text-text-sub'">
             <i class="fa-solid fa-circle-nodes text-base mb-0.5"></i>
             <span class="text-[10px]">隨身資訊</span>
