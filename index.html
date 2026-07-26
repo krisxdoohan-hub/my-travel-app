@@ -362,14 +362,24 @@
                     <i :class="getInfoCatIcon(catName)" class="mr-2 opacity-80"></i>{{ catName }}
                 </h3>
                 <div class="space-y-2">
-                    <div v-for="(info, iIdx) in cat" :key="iIdx" class="bg-[#F4EFE6] p-4 rounded-xl relative group">
+                    <div v-for="(info, iIdx) in cat" :key="iIdx" class="bg-[#F4EFE6] p-4 rounded-xl relative group" :class="{'opacity-60': info.done}">
                         <div class="flex justify-between items-start">
-                            <h4 class="text-xs font-bold text-text-main">{{ info.title }}</h4>
-                            <button v-if="checkPermission('canManageInfo')" @click="deleteInfoItem(catName, iIdx)" class="btn-icon text-gray-300 hover:text-red-400 text-xs">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
+                            <label class="flex items-start space-x-3 cursor-pointer flex-1">
+                                <input type="checkbox" v-model="info.done" class="w-4 h-4 rounded text-morandi focus:ring-morandi border-gray-300 mt-0.5 flex-shrink-0">
+                                <div class="flex-1">
+                                    <h4 class="text-xs font-bold text-text-main" :class="{'line-through text-text-sub': info.done}">{{ info.title }}</h4>
+                                    <p class="text-xs text-text-sub mt-1 whitespace-pre-wrap" :class="{'line-through': info.done}">{{ info.content }}</p>
+                                </div>
+                            </label>
+                            <div v-if="checkPermission('canManageInfo')" class="flex space-x-3 ml-2 flex-shrink-0">
+                                <button @click="openEditInfoModal(catName, iIdx)" class="btn-icon text-gray-300 hover:text-morandi-dark text-xs p-1">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button @click="deleteInfoItem(catName, iIdx)" class="btn-icon text-gray-300 hover:text-red-400 text-xs p-1">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
                         </div>
-                        <p class="text-xs text-text-sub mt-2 whitespace-pre-wrap">{{ info.content }}</p>
                     </div>
                     <p v-if="cat.length === 0" class="text-xs text-text-sub text-center py-4 opacity-60">暫無內容</p>
                 </div>
@@ -495,11 +505,11 @@
 
     <div v-if="showInfoModal" class="absolute inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4">
         <div class="bg-[#FAF6EB] w-full max-w-sm rounded-3xl p-6 space-y-4 shadow-xl">
-            <h3 class="font-bold text-text-main text-base">新增隨身站資訊</h3>
+            <h3 class="font-bold text-text-main text-base">{{ infoModalMode === 'edit' ? '編輯隨身站資訊' : '新增隨身站資訊' }}</h3>
             <div class="space-y-4 text-xs">
                 <div>
                     <label class="block text-text-sub mb-2 font-medium">歸類看板</label>
-                    <select v-model="infoModalData.category" class="input-field w-full">
+                    <select v-model="infoModalData.category" class="input-field w-full" :disabled="infoModalMode === 'edit'">
                         <option value="資訊整理">📋 資訊整理</option>
                         <option value="備用參考景點">⛩️ 備用參考景點</option>
                         <option value="緊急醫療">🚑 緊急醫療</option>
@@ -516,7 +526,7 @@
             </div>
             <div class="flex space-x-4 text-xs pt-4">
                 <button @click="showInfoModal = false" class="btn-secondary flex-1 border-gray-200 text-text-sub hover:bg-gray-100">取消</button>
-                <button @click="saveInfoItem" class="btn-primary flex-1">新增發布</button>
+                <button @click="saveInfoItem" class="btn-primary flex-1">{{ infoModalMode === 'edit' ? '儲存修改' : '新增發布' }}</button>
             </div>
         </div>
     </div>
