@@ -199,14 +199,30 @@
             <div class="space-y-2 mt-2">
                 <div v-for="(todo, idx) in todos" :key="idx" 
                      class="card-container flex items-center justify-between"
-                     :class="{'opacity-60 bg-[#F4EFE6]': todo.done}">
-                    <label class="flex items-center space-x-4 cursor-pointer flex-1">
-                        <input type="checkbox" v-model="todo.done" class="w-4 h-4 rounded text-morandi focus:ring-morandi border-gray-300">
-                        <span class="text-sm text-text-main" :class="{'line-through text-text-sub': todo.done}">{{ todo.text }}</span>
-                    </label>
-                    <button v-if="checkPermission('canManageTodo')" @click="deleteTodo(idx)" class="btn-icon text-gray-300 hover:text-red-400 p-1">
-                        <i class="fa-solid fa-trash-can text-xs"></i>
-                    </button>
+                     :class="{'opacity-60 bg-[#F4EFE6]': todo.done && editingTodoIndex !== idx}">
+                     
+                    <!-- 編輯模式 -->
+                    <div v-if="editingTodoIndex === idx" class="flex-1 flex items-center space-x-2">
+                        <input v-model="editingTodoText" @keyup.enter="saveTodoEdit(idx)" type="text" class="input-field flex-1 py-1 px-2 text-sm bg-white border-morandi">
+                        <button @click="saveTodoEdit(idx)" class="btn-icon text-morandi-dark hover:text-morandi-deep p-1"><i class="fa-solid fa-check"></i></button>
+                        <button @click="cancelTodoEdit" class="btn-icon text-gray-400 hover:text-gray-600 p-1"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+
+                    <!-- 一般顯示模式 -->
+                    <template v-else>
+                        <label class="flex items-center space-x-4 cursor-pointer flex-1">
+                            <input type="checkbox" v-model="todo.done" class="w-4 h-4 rounded text-morandi focus:ring-morandi border-gray-300">
+                            <span class="text-sm text-text-main" :class="{'line-through text-text-sub': todo.done}">{{ todo.text }}</span>
+                        </label>
+                        <div v-if="checkPermission('canManageTodo')" class="flex space-x-2">
+                            <button @click="startEditTodo(idx)" class="btn-icon text-gray-300 hover:text-morandi-dark p-1">
+                                <i class="fa-solid fa-pen text-xs"></i>
+                            </button>
+                            <button @click="deleteTodo(idx)" class="btn-icon text-gray-300 hover:text-red-400 p-1">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
+                    </template>
                 </div>
                 <p v-if="todos.length === 0" class="text-center text-xs text-text-sub py-8">暫無待辦事項，動手新增一個吧！</p>
             </div>
@@ -456,14 +472,30 @@
             </div>
 
             <div class="flex-1 overflow-y-auto hide-scrollbar mt-4 space-y-2">
-                <div v-for="(shop, sIdx) in shoppingList" :key="sIdx" class="flex items-center justify-between p-4 bg-[#F4EFE6] rounded-xl" :class="{'opacity-50': shop.bought}">
-                    <label class="flex items-center space-x-4 cursor-pointer flex-1">
-                        <input type="checkbox" v-model="shop.bought" class="w-4 h-4 rounded text-morandi focus:ring-morandi border-gray-300">
-                        <span class="text-xs text-text-main" :class="{'line-through': shop.bought}">{{ shop.text }}</span>
-                    </label>
-                    <button v-if="checkPermission('canManageShopping')" @click="deleteShoppingItem(sIdx)" class="btn-icon text-gray-300 hover:text-red-400 p-1">
-                      <i class="fa-solid fa-trash-can text-xs"></i>
-                    </button>
+                <div v-for="(shop, sIdx) in shoppingList" :key="sIdx" class="flex items-center justify-between p-4 bg-[#F4EFE6] rounded-xl" :class="{'opacity-50': shop.bought && editingShoppingIndex !== sIdx}">
+                    
+                    <!-- 編輯模式 -->
+                    <div v-if="editingShoppingIndex === sIdx" class="flex-1 flex items-center space-x-2">
+                        <input v-model="editingShoppingText" @keyup.enter="saveShoppingEdit(sIdx)" type="text" class="input-field flex-1 py-1 px-2 text-xs bg-white border-morandi">
+                        <button @click="saveShoppingEdit(sIdx)" class="btn-icon text-morandi-dark hover:text-morandi-deep p-1"><i class="fa-solid fa-check text-xs"></i></button>
+                        <button @click="cancelShoppingEdit" class="btn-icon text-gray-400 hover:text-gray-600 p-1"><i class="fa-solid fa-xmark text-xs"></i></button>
+                    </div>
+
+                    <!-- 一般顯示模式 -->
+                    <template v-else>
+                        <label class="flex items-center space-x-4 cursor-pointer flex-1">
+                            <input type="checkbox" v-model="shop.bought" class="w-4 h-4 rounded text-morandi focus:ring-morandi border-gray-300">
+                            <span class="text-xs text-text-main" :class="{'line-through': shop.bought}">{{ shop.text }}</span>
+                        </label>
+                        <div v-if="checkPermission('canManageShopping')" class="flex space-x-2">
+                            <button @click="startEditShopping(sIdx)" class="btn-icon text-gray-300 hover:text-morandi-dark p-1">
+                                <i class="fa-solid fa-pen text-xs"></i>
+                            </button>
+                            <button @click="deleteShoppingItem(sIdx)" class="btn-icon text-gray-300 hover:text-red-400 p-1">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
+                    </template>
                 </div>
                 <p v-if="shoppingList.length === 0" class="text-center text-xs text-text-sub py-8">購物清單空空如也</p>
             </div>
@@ -479,9 +511,12 @@
                     <select v-model="modalData.category" class="input-field w-full">
                         <option value="景點">⛩️ 景點</option>
                         <option value="住宿">🏨 住宿</option>
+                        <option value="車站">🚉 車站</option>
                         <option value="交通">🚇 交通</option>
+                        <option value="機場">🛫 機場</option>
+                        <option value="港口">🚢 港口</option>
                         <option value="航班">✈️ 航班</option>
-                        <option value="美食">🍜 美食</option>
+                        <option value="餐廳">🍽️ 餐廳</option>
                         <option value="購物">🛍️ 購物</option>
                         <option value="其他">📍 其他</option>
                     </select>
