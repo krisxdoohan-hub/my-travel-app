@@ -41,6 +41,7 @@ const appInstance = createApp({
             isTripLocked: false,
             appVersion: CONFIG.APP_VERSION,
             tripTitle: '我的全新旅程',
+            weatherCities: [], // 🌟 新增：存放手動搜尋的天氣城市清單，隨行程同步上雲端
             isEditingTitle: false,
             currentTab: 'todo',
             dayViewMode: 'list',
@@ -176,6 +177,7 @@ const appInstance = createApp({
    watch: {        
         tripTitle() { this.saveToLocal(); },
         linkTripId() { this.saveToLocal(); },
+        weatherCities: { deep: true, handler() { this.saveToLocal(); } }, // 🌟 新增：監聽天氣清單，有異動即自動存檔
         days: { deep: true, handler() { this.saveToLocal(); } },
         itineraries: { deep: true, handler() { this.saveToLocal(); } },
         todos: { deep: true, handler() { this.saveToLocal(); } },
@@ -699,7 +701,7 @@ methods: {
             }
         },
         getAllData() {
-            return JSON.stringify({ tripTitle: this.tripTitle, linkTripId: this.linkTripId, days: this.days, itineraries: this.itineraries, todos: this.todos, shoppingList: this.shoppingList, infoStation: this.infoStation, gasUrl: this.gasUrl, isTripLocked: this.isTripLocked });
+            return JSON.stringify({ tripTitle: this.tripTitle, linkTripId: this.linkTripId, weatherCities: this.weatherCities, days: this.days, itineraries: this.itineraries, todos: this.todos, shoppingList: this.shoppingList, infoStation: this.infoStation, gasUrl: this.gasUrl, isTripLocked: this.isTripLocked });
         },
         saveToLocal() { localStorage.setItem('myTripAutoSave', this.getAllData()); },
         loadFromLocal() {
@@ -712,6 +714,7 @@ methods: {
                 const data = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
                 if (data.tripTitle !== undefined) this.tripTitle = data.tripTitle;
                 if (data.linkTripId !== undefined) this.linkTripId = data.linkTripId;
+                if (data.weatherCities) this.weatherCities = data.weatherCities; // 🌟 新增：讀取還原雲端的天氣清單
                 if (data.days) this.days = data.days;
                 if (data.itineraries) this.itineraries = data.itineraries;
                 if (data.todos) this.todos = data.todos;
@@ -1063,7 +1066,7 @@ methods: {
                 
                 this.syncSuccess = true;
                 this.syncMessage = '雲端行程讀取成功！權限已重新套用。';
-            } catch (error) {
+            } catch (error) {A
                 this.syncSuccess = false;
                 this.syncMessage = '下載失敗：' + error.message;
             } finally {
