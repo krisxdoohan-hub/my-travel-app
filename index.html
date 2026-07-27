@@ -424,6 +424,23 @@
                 </h2>
             </div>
             
+            <!-- 🌟 新增：手動搜尋城市輸入框 (iOS 風格) -->
+            <div class="relative mb-3 mx-1">
+                <div class="flex items-center bg-white border border-gray-200 rounded-2xl px-4 py-2 shadow-sm focus-within:border-morandi focus-within:ring-1 focus-within:ring-morandi transition-all">
+                    <i class="fa-solid fa-magnifying-glass text-gray-400 mr-2"></i>
+                    <input type="text" id="weather-search-input" placeholder="搜尋城市或機場..." 
+                           class="flex-1 bg-transparent outline-none text-sm text-text-main" 
+                           oninput="window.WeatherManager.handleSearchInput(event)"
+                           onfocus="window.WeatherManager.showSearchResults()">
+                    <button id="weather-search-clear" onclick="window.WeatherManager.clearSearch()" class="hidden text-gray-400 hover:text-gray-600 ml-2">
+                        <i class="fa-solid fa-circle-xmark"></i>
+                    </button>
+                </div>
+                <!-- 搜尋結果下拉選單 -->
+                <div id="weather-search-results" class="absolute w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-[100] hidden max-h-60 overflow-y-auto divide-y divide-gray-100">
+                </div>
+            </div>
+
             <!-- 天氣地點標籤列 (由 weather.js 動態生成) -->
             <div id="weather-location-tabs" class="flex space-x-3 overflow-x-auto hide-scrollbar pb-3 pt-1">
                 <!-- JS 動態注入 -->
