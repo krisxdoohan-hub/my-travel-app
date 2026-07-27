@@ -1,746 +1,357 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    
-    <link rel="manifest" href="./manifest.json">
-    <meta name="theme-color" content="#7A9A74">
-    
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="隨身旅遊">
-    <link rel="apple-touch-icon" href="./icon-192x192.png">
+// js/modules/weather.js
 
-    <title>日系極簡隨身旅遊</title>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <script src="https://maps.googleapis.com/maps/api/js?key=++++++++++++++"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+window.WeatherManager = {
+    savedCities: [], // 儲存使用者手動新增的城市 [{name, lat, lon}]
+    currentSelectedCity: null,
+    forecastCache: {},
+    searchTimeout: null, // 搜尋防抖動計時器
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        white: '#FAF6EB',
-                        gray: {
-                            50: '#F4EFE6',
-                            100: '#EAE3D2',
-                            200: '#D4C9B3',
-                            300: '#BDB19C'
-                        },
-                        morandi: {
-                            light: '#EAE3D2',
-                            accent: '#D4C9B3',
-                            DEFAULT: '#7A9A74',
-                            dark: '#5C7A58',
-                            deep: '#435E3F'
-                        },
-                        text: {
-                            main: '#4A4A4A',
-                            sub: '#737373'
-                        }
-                    }
-                }
+    // 氣象代碼轉換
+    getWeatherInfo(code) {
+        const wmo = { 
+            0:{icon:'☀️',desc:'晴天'}, 1:{icon:'🌤️',desc:'大致晴朗'}, 2:{icon:'⛅',desc:'部分多雲'}, 
+            3:{icon:'☁️',desc:'陰天'}, 45:{icon:'🌫️',desc:'霧'}, 48:{icon:'🌫️',desc:'霧淞'}, 
+            51:{icon:'🌦️',desc:'小毛毛雨'}, 53:{icon:'🌦️',desc:'中毛毛雨'}, 55:{icon:'🌧️',desc:'大毛毛雨'}, 
+            61:{icon:'🌧️',desc:'小雨'}, 63:{icon:'🌧️',desc:'中雨'}, 65:{icon:'🌧️',desc:'大雨'}, 
+            71:{icon:'❄️',desc:'小雪'}, 73:{icon:'❄️',desc:'中雪'}, 75:{icon:'❄️',desc:'大雪'}, 
+            77:{icon:'🌨️',desc:'冰晶'}, 80:{icon:'🌦️',desc:'陣雨'}, 81:{icon:'🌧️',desc:'中陣雨'}, 
+            82:{icon:'⛈️',desc:'大陣雨'}, 85:{icon:'🌨️',desc:'陣雪'}, 86:{icon:'🌨️',desc:'大陣雪'}, 
+            95:{icon:'⛈️',desc:'雷陣雨'}, 96:{icon:'⛈️',desc:'雷陣雨夾冰雹'}, 99:{icon:'⛈️',desc:'強雷陣雨夾冰雹'} 
+        };
+        return wmo[code] || { icon: '🌡️', desc: '未知' };
+    },
+
+    // 啟動天氣總覽視圖 (手動搜尋模式，同步至 Vue 行程檔)
+    async initWeatherView() {
+        const tabsContainer = document.getElementById('weather-location-tabs');
+        const contentContainer = document.getElementById('weather-forecast-content');
+        if (!tabsContainer || !contentContainer) return;
+
+        // 從 Vue 實體讀取綁定行程的城市清單
+        if (window.vueAppInstance) {
+            if (!window.vueAppInstance.weatherCities) {
+                window.vueAppInstance.weatherCities = [];
             }
+            this.savedCities = window.vueAppInstance.weatherCities;
+        } else {
+            this.savedCities = [];
         }
-    </script>
-    
-    <!-- 需要 Tailwind 即時編譯的自訂元件，必須保留在 HTML 內 -->
-    <style type="text/tailwindcss">
-        @layer components {
-            .btn-primary { @apply bg-morandi text-white px-4 py-2 rounded-xl hover:bg-morandi-dark active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center; }
-            .btn-secondary { @apply bg-[#FAF6EB] border border-morandi text-morandi-dark px-4 py-2 rounded-xl hover:bg-morandi-light active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center; }
-            .btn-danger { @apply bg-red-50 text-red-500 border border-red-200 px-4 py-2 rounded-xl hover:bg-red-100 active:scale-95 disabled:opacity-50 transition-all duration-200 flex items-center justify-center; }
-            .btn-icon { @apply text-morandi-dark hover:text-morandi-deep active:scale-90 disabled:opacity-50 transition-all duration-200; }
-            .input-field { @apply w-full border border-gray-200 px-4 py-2 rounded-xl bg-[#F4EFE6] outline-none focus:border-morandi transition-all duration-200 text-sm; }
-            .input-error { @apply border-red-500 focus:border-red-500 ring-1 ring-red-200; }
-            .card-container { @apply bg-[#FAF6EB] p-4 rounded-2xl border border-gray-100 shadow-sm transition-all; }
+
+        // 預設選擇第一個城市
+        if (!this.currentSelectedCity || !this.savedCities.find(c => c.name === this.currentSelectedCity)) {
+            this.currentSelectedCity = this.savedCities.length > 0 ? this.savedCities[0].name : null;
         }
-    </style>
 
-    <!-- 核心佈局與樣式，回歸 index.html 以避免 file:// 載入延遲與跨平台高度異常 -->
-    <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
-            background-color: #F4EFE6;
-            background-image: radial-gradient(#D4C9B3 1.5px, transparent 1.5px);
-            background-size: 24px 24px;
-            color: #4A4A4A;
-            user-select: none;
+        this.renderTabs();
+        if (this.currentSelectedCity) {
+            this.loadAndRenderForecast(this.currentSelectedCity);
+        } else {
+            contentContainer.innerHTML = `
+                <div class="text-center text-xs text-text-sub py-12 bg-[#FAF6EB] rounded-2xl shadow-sm border border-gray-200 mx-2">
+                    <i class="fa-solid fa-location-dot text-3xl text-gray-300 mb-3"></i>
+                    <p class="font-bold text-gray-500 text-sm mb-1">尚未加入任何城市</p>
+                    <p class="text-[10px] opacity-70 mt-2">請使用上方搜尋列加入天氣預報地點</p>
+                </div>`;
         }
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
-        .gm-style { z-index: 10; font-family: inherit; }
-    </style>
-</head>
-<body class="flex justify-center items-center h-screen w-screen overflow-hidden leading-relaxed">
+    },
 
-    <div id="loading-overlay" class="fixed inset-0 bg-black/60 z-[99999] hidden flex-col justify-center items-center text-white backdrop-blur-sm">
-        <i class="fa-solid fa-spinner fa-spin text-4xl mb-4 text-morandi-light"></i>
-        <p id="loading-text" class="font-bold tracking-wider">處理中...</p>
-    </div>
+    // 🌟 同步至 Vue 實體，以便跟隨 JSON 存檔上雲端
+    syncToVue() {
+        if (window.vueAppInstance) {
+            window.vueAppInstance.weatherCities = this.savedCities;
+        }
+    },
 
-    <div id="lock-screen" class="fixed inset-0 bg-indigo-950 z-[99990] flex flex-col justify-center items-center text-white p-6 transition-all duration-300">
-        <div class="w-full max-w-xs text-center space-y-10">
-            <div class="flex flex-col items-center gap-4">
-                <div class="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center border border-white/20 shadow-xl">
-                    <i class="fa-solid fa-lock text-4xl text-indigo-300"></i>
-                </div>
-                <h2 class="text-2xl font-black tracking-widest text-white">隨身旅遊系統</h2>
-                <p class="text-xs text-indigo-200 font-medium opacity-60">請登入雲端帳號以同步資料</p>
-            </div>
-            
-            <div class="flex flex-col gap-4 px-4 w-full max-w-[280px] mx-auto mt-6">
-                <input type="text" id="fb-account" placeholder="帳號 (限英數字，無空格)" class="w-full bg-white/10 border border-white/20 rounded-xl p-3 text-white placeholder-indigo-200/50 focus:outline-none focus:ring-2 focus:ring-indigo-400">
-                <input type="password" id="fb-password" placeholder="密碼 (至少6位數)" class="w-full bg-white/10 border border-white/20 rounded-xl p-3 text-white placeholder-indigo-200/50 focus:outline-none focus:ring-2 focus:ring-indigo-400">
-                <div class="flex gap-3 mt-2">
-                    <button onclick="handleFirebaseLogin()" class="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 rounded-xl transition duration-200 shadow-md active:scale-95 focus:outline-none">
-                        登入
-                    </button>
-                    <button onclick="handleFirebaseRegister()" class="flex-1 bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 rounded-xl transition duration-200 shadow-md active:scale-95 focus:outline-none">
-                        註冊
-                    </button>
-                </div>
-                <p id="fb-error-msg" class="text-rose-400 text-xs text-center h-4 font-bold opacity-0 transition-opacity"></p>
-            </div>
-        </div>
-    </div>
-
-<div id="app" class="w-full max-w-md bg-[#F4EFE6] h-full flex flex-col relative shadow-2xl overflow-hidden border border-gray-100">
-    
-    <header class="bg-morandi-light pb-3 px-5 rounded-b-[2.5rem] shadow-sm flex-shrink-0 z-20" style="padding-top: calc(2rem + env(safe-area-inset-top, 0px));">
-        <div class="flex justify-between items-center mb-4">
-            <div class="flex-1 mr-4">
-                <input v-if="isEditingTitle" v-model.trim="tripTitle" @blur="isEditingTitle = false" @keyup.enter="isEditingTitle = false" ref="titleInput"
-                       class="text-xl font-bold bg-[#FAF6EB] px-2 py-1 rounded-md w-full border border-morandi text-text-main outline-none">
-                <h1 v-else @click="checkPermission('canEditTitle') ? editTitle() : null" class="text-xl font-bold text-text-main tracking-wide flex items-center group" :class="{'cursor-pointer': checkPermission('canEditTitle')}">
-                    {{ tripTitle }}
-                    <i v-if="checkPermission('canEditTitle')" class="fa-regular fa-pen-to-square text-xs ml-2 text-morandi-dark opacity-50 group-hover:opacity-100 transition"></i>
-                </h1>
-            </div>
-            
-            <div class="flex items-center space-x-4">
-                <button @click="showSyncModal = true" class="btn-icon" title="資料同步與轉移">
-                    <i class="fa-solid fa-cloud text-lg"></i>
-                </button>
-
-                <button onclick="handleFirebaseLogout()" class="btn-icon text-red-700/70 hover:text-red-700" title="登出系統">
-                    <i class="fa-solid fa-right-from-bracket text-lg"></i>
-                </button>
-                
-                <button @click="showShoppingModal = true" class="btn-icon relative" title="購物清單">
-                    <i class="fa-solid fa-basket-shopping text-lg"></i>
-                    <span v-if="remainingShoppingCount > 0" class="absolute -top-1 -right-1 bg-red-400 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold" style="color: white;">
-                        {{ remainingShoppingCount }}
-                    </span>
-                </button>
-            </div>
-        </div>
-
-        <div class="flex space-x-3 overflow-x-auto hide-scrollbar py-2 px-1" ref="tabsContainer" @wheel="handleTabScroll">
-            <div @click="handleTabChange('todo')" 
-                 class="flex-shrink-0 flex flex-col items-center justify-center w-14 h-16 rounded-2xl cursor-pointer transition-all duration-300"
-                 :class="currentTab === 'todo' ? 'bg-morandi text-white shadow-md font-semibold' : 'bg-[#FAF6EB] text-text-sub border border-gray-100 hover:bg-[#F4EFE6]'">
-                <i class="fa-solid fa-list-check text-xs mb-1"></i>
-                <span class="text-[10px]">TODO</span>
-            </div>
-
-            <!-- 修改：Tab 完全回歸純淨功能，只負責切換與長按拖曳，移除額外按鈕 -->
-            <div v-for="(day, index) in days" :key="'day-' + index + '-' + forceUpdateTabsKey" :data-index="index"
-                 @click="handleTabChange('day-' + index)"
-                 class="day-tab flex-shrink-0 relative flex flex-col items-center justify-center w-14 h-16 rounded-2xl cursor-pointer transition-all duration-300 shadow-sm"
-                 :style="currentTab === 'day-' + index ? { backgroundColor: currentThemeColor, color: '#FAF6EB', fontWeight: '600' } : { backgroundColor: '#FAF6EB', color: '#737373', border: '1px solid #EAE3D2' }">
-                <span class="text-[9px] opacity-80 mb-0.5">Day {{ index + 1 }}</span>
-                <span class="text-xs font-bold">{{ day.date }}</span>
-            </div>
-
-            <div v-if="checkPermission('canManageDays')" @click="addNewDay" 
-                 class="flex-shrink-0 flex flex-col items-center justify-center w-14 h-16 rounded-2xl cursor-pointer transition-all duration-300 bg-gray-50 border border-dashed border-gray-300 text-gray-400 hover:text-morandi hover:border-morandi active:scale-95">
-                <i class="fa-solid fa-plus text-xs mb-1"></i>
-                <span class="text-[9px]">新增天數</span>
-            </div>
-
-            <div @click="handleTabChange('info')" 
-                 class="flex-shrink-0 flex flex-col items-center justify-center w-14 h-16 rounded-2xl cursor-pointer transition-all duration-300"
-                 :class="currentTab === 'info' ? 'bg-morandi text-white shadow-md font-semibold' : 'bg-[#FAF6EB] text-text-sub border border-gray-100 hover:bg-[#F4EFE6]'">
-                <i class="fa-solid fa-circle-info text-xs mb-1"></i>
-                <span class="text-[10px]">資訊站</span>
-            </div>
-        </div>
-    </header>
-
-    <main class="flex-1 overflow-y-auto hide-scrollbar p-4 pb-20 bg-[#F4EFE6]">
+    // 🌟 處理搜尋框輸入 (Debounce 防抖動)
+    handleSearchInput(event) {
+        const keyword = event.target.value.trim();
+        const clearBtn = document.getElementById('weather-search-clear');
         
-        <div v-if="currentTab === 'todo'" class="space-y-4">
-            <div class="flex items-center justify-between border-b border-gray-100 pb-2">
-                <h2 class="text-base font-bold text-text-main flex items-center">
-                    <i class="fa-solid fa-check-square mr-2 text-morandi-dark"></i>行前備忘待辦
-                </h2>
-                <span class="text-xs text-text-sub">已完成 {{ completedTodoCount }}/{{ todos.length }}</span>
-            </div>
-            
-            <div class="flex flex-col space-y-2">
-                <div class="flex space-x-2" v-if="checkPermission('canManageTodo')">
-                    <input v-model="newTodoText" @keyup.enter="addTodo" @input="todoError = false" type="text" placeholder="新增待辦事項..." 
-                           class="input-field flex-1" :class="{'input-error': todoError}">
-                    <button @click="addTodo" class="btn-primary">
-                        <i class="fa-solid fa-plus"></i>
-                    </button>
-                </div>
-                <span v-if="todoError" class="text-red-500 text-xs px-2">請輸入待辦事項內容</span>
-            </div>
+        if (keyword.length > 0) {
+            clearBtn.classList.remove('hidden');
+        } else {
+            clearBtn.classList.add('hidden');
+            document.getElementById('weather-search-results').classList.add('hidden');
+            return;
+        }
 
-            <div class="space-y-2 mt-2">
-                <div v-for="(todo, idx) in todos" :key="idx" 
-                     class="card-container flex items-center justify-between"
-                     :class="{'opacity-60 bg-[#F4EFE6]': todo.done && editingTodoIndex !== idx}">
-                     
-                    <!-- 編輯模式 -->
-                    <div v-if="editingTodoIndex === idx" class="flex-1 flex items-center space-x-2">
-                        <input v-model="editingTodoText" @keyup.enter="saveTodoEdit(idx)" type="text" class="input-field flex-1 py-1 px-2 text-sm bg-white border-morandi">
-                        <button @click="saveTodoEdit(idx)" class="btn-icon text-morandi-dark hover:text-morandi-deep p-1"><i class="fa-solid fa-check"></i></button>
-                        <button @click="cancelTodoEdit" class="btn-icon text-gray-400 hover:text-gray-600 p-1"><i class="fa-solid fa-xmark"></i></button>
-                    </div>
+        clearTimeout(this.searchTimeout);
+        this.searchTimeout = setTimeout(() => {
+            this.executeSearch(keyword);
+        }, 500);
+    },
 
-                    <!-- 一般顯示模式 -->
-                    <template v-else>
-                        <label class="flex items-center space-x-4 cursor-pointer flex-1">
-                            <input type="checkbox" v-model="todo.done" class="w-4 h-4 rounded text-morandi focus:ring-morandi border-gray-300">
-                            <span class="text-sm text-text-main" :class="{'line-through text-text-sub': todo.done}">{{ todo.text }}</span>
-                        </label>
-                        <div v-if="checkPermission('canManageTodo')" class="flex space-x-2">
-                            <button @click="startEditTodo(idx)" class="btn-icon text-gray-300 hover:text-morandi-dark p-1">
-                                <i class="fa-solid fa-pen text-xs"></i>
-                            </button>
-                            <button @click="deleteTodo(idx)" class="btn-icon text-gray-300 hover:text-red-400 p-1">
-                                <i class="fa-solid fa-trash-can text-xs"></i>
-                            </button>
-                        </div>
-                    </template>
-                </div>
-                <p v-if="todos.length === 0" class="text-center text-xs text-text-sub py-8">暫無待辦事項，動手新增一個吧！</p>
-            </div>
-        </div>
+    // 🌟 清除搜尋
+    clearSearch() {
+        const input = document.getElementById('weather-search-input');
+        input.value = '';
+        document.getElementById('weather-search-clear').classList.add('hidden');
+        document.getElementById('weather-search-results').classList.add('hidden');
+        input.focus();
+    },
 
-        <div v-if="currentTab.startsWith('day-')" class="space-y-4">
-            
-            <!-- 修改：將原本的編輯按鈕改為直接觸發喚出底部動作選單 openDayActionMenu -->
-            <div class="card-container flex items-center justify-between cursor-pointer active:scale-95 transition-transform" 
-                 @click="checkPermission('canManageDays') ? openDayActionMenu(currentDayIndex) : null"
-                 :style="{ borderLeft: '4px solid ' + currentThemeColor }">
-                <h2 class="text-base font-bold text-text-main flex items-center">
-                    <i class="fa-regular fa-calendar-check mr-2" :style="{ color: currentThemeColor }"></i>
-                    Day {{ currentDayIndex + 1 }}：{{ days[currentDayIndex] ? days[currentDayIndex].date : '' }}
-                </h2>
-                <button v-if="checkPermission('canManageDays')" class="btn-icon text-text-sub">
-                    <i class="fa-solid fa-pen text-sm"></i>
-                </button>
-            </div>
+    // 🌟 顯示搜尋結果
+    showSearchResults() {
+        const input = document.getElementById('weather-search-input');
+        if (input.value.trim().length > 0) {
+            document.getElementById('weather-search-results').classList.remove('hidden');
+        }
+    },
 
-            <div class="card-container flex items-center justify-between">
-                <div class="space-y-1">
-                    <h4 class="text-xs font-semibold text-text-sub tracking-wider">TODAY'S PROGRESS</h4>
-                    <div class="flex items-baseline space-x-2">
-                        <span class="text-2xl font-bold text-text-main">{{ currentDayProgress }}%</span>
-                        <span class="text-xs text-text-sub">(剩餘 {{ remainingSpotsCount }} 個景點)</span>
-                    </div>
-                </div>
-                <div class="w-12 h-12 rounded-full border-4 relative flex items-center justify-center"
-                     :style="'background: conic-gradient(' + currentThemeColor + ' ' + currentDayProgress + '%, transparent 0); border-color: ' + currentThemeColorLight + ';'">
-                    <div class="w-10 h-10 rounded-full flex items-center justify-center text-[10px] font-bold"
-                         :style="{ backgroundColor: '#FAF6EB', color: currentThemeColor }">
-                        {{ currentDayCompletedCount }}/{{ currentItinerary.length }}
-                    </div>
-                </div>
-            </div>
+    // 🌟 呼叫 OpenStreetMap API 搜尋城市 (全球在地化最精準、完全免費)
+    async executeSearch(keyword) {
+        const resultsContainer = document.getElementById('weather-search-results');
+        resultsContainer.innerHTML = `<div class="p-4 text-center text-xs text-gray-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i>搜尋中...</div>`;
+        resultsContainer.classList.remove('hidden');
 
-           <div class="flex space-x-4 border-b border-gray-100 mb-4 justify-center">
-                <button @click="handleViewMode('list')" class="pb-2 text-sm font-medium transition-all px-4"
-                        :class="dayViewMode === 'list' ? 'text-morandi-dark border-b-2 border-morandi-dark font-bold' : 'text-text-sub hover:text-text-main'">
-                    <i class="fa-solid fa-route mr-2"></i>行程清單
-                </button>
-                <button v-if="!isTravelGuest" @click="handleViewMode('map')" class="pb-2 text-sm font-medium transition-all px-4"
-                        :class="dayViewMode === 'map' ? 'text-morandi-dark border-b-2 border-morandi-dark font-bold' : 'text-text-sub hover:text-text-main'">
-                    <i class="fa-solid fa-map-location-dot mr-2"></i>Google 地圖
-                </button>
-            </div>
+        try {
+            // 改用 OpenStreetMap (Nominatim)，對台灣與日本的在地地標、繁體中文支援度極高！
+            const osmUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(keyword)}&format=json&limit=5&accept-language=zh-TW`;
+            const res = await fetch(osmUrl);
+            const data = await res.json();
 
-            <div v-if="dayViewMode === 'list'" class="space-y-4" ref="itineraryList">
-                <div v-for="(item, idx) in currentItinerary" :key="item.id || idx" 
-                     class="itinerary-item card-container relative flex flex-col"
-                     :class="{'bg-[#F4EFE6] border-dashed opacity-70': item.completed}"
-                     :style="!item.completed && item.category === '交通方式' ? 'background-color: #EAF0EA; border-color: #7A9A74;' : (!item.completed && item.category === '備選餐廳' ? 'background-color: #EFEAF4; border-color: #9374C5;' : '')">
+            if (data && data.length > 0) {
+                resultsContainer.innerHTML = data.map(item => {
+                    // 提取 OSM 整理好的顯示名稱
+                    let displayName = item.display_name || keyword;
+                    displayName = displayName.replace(/'/g, "\\'"); 
                     
-                    <div class="flex items-start justify-between">
-                        <div class="flex items-center space-x-4">
-                            <input type="checkbox" v-model="item.completed" class="w-4 h-4 rounded text-morandi focus:ring-morandi border-gray-300">
-                            <span class="text-xs px-2 py-1 rounded-full border" 
-                                  :style="!item.completed && item.category === '交通方式' ? { backgroundColor: '#7A9A74', color: '#FAF6EB', borderColor: '#7A9A74' } : (!item.completed && item.category === '備選餐廳' ? { backgroundColor: '#9374C5', color: '#FAF6EB', borderColor: '#9374C5' } : { backgroundColor: currentThemeColorLight, color: currentThemeColor, borderColor: currentThemeColor })">
-                                {{ getCategoryIcon(item.category) }} {{ item.category }}
-                            </span>
-                        </div>
-
-                        <!-- 修正：當 completed 為 true 時，拔除 drag-handle 類別以防止 Sortable.js 拖曳，並加上反灰與禁用的視覺效果 -->
-                        <div class="p-2 transition touch-none" 
-                             :class="item.completed 
-                                 ? 'opacity-30 cursor-not-allowed text-gray-400' 
-                                 : 'drag-handle cursor-move active:scale-90 text-gray-300 hover:text-morandi-dark'">
-                            <i class="fa-solid fa-grip-lines text-base"></i>
-                        </div>
-                    </div>
-
-                    <div class="mt-2 pl-8">
-                        <h3 class="text-base font-bold flex items-center flex-wrap gap-2" 
-                            :class="{'line-through text-text-sub': item.completed, 'text-text-main': !item.completed}">
-                            {{ item.location }}
-                        </h3>
-                        <p v-if="item.notes" class="text-xs mt-2 whitespace-pre-wrap p-2 rounded-lg border text-text-sub bg-[#F4EFE6] border-gray-100">
-                            <i class="fa-regular fa-sticky-note mr-2 opacity-60"></i>{{ item.notes }}
-                        </p>
-                    </div>
-
-                    <div class="flex justify-between items-center mt-4 pt-2 border-t border-gray-100 pl-8">
-                        
-                        <!-- 修正：加入 :disabled="item.completed"，並改寫 :class 讓鎖定時呈現反灰狀態 -->
-                        <button @click="openExternalNav(idx)" :disabled="item.completed"
-                                class="flex items-center font-medium text-xs transition-all duration-200"
-                                :class="item.completed ? 'opacity-50 cursor-not-allowed text-gray-400' : 'active:scale-90 text-morandi-dark hover:text-morandi-deep'">
-                            <i class="fa-solid fa-diamond-turn-right mr-1 text-xs"></i>導航
-                        </button>
-                        
-                        <div v-if="checkPermission('canManageItinerary')" class="flex space-x-4 text-xs">
-                            <!-- 修正：加入 :disabled="item.completed"，並改寫 :class 讓鎖定時呈現反灰狀態 -->
-                            <button @click="openEditModal(idx)" :disabled="item.completed"
-                                    class="transition-all duration-200"
-                                    :class="item.completed ? 'opacity-50 cursor-not-allowed text-gray-400' : 'active:scale-90 text-text-sub hover:text-morandi-dark'">
-                                <i class="fa-solid fa-pen-to-square mr-1"></i>編輯
-                            </button>
-                            
-                            <!-- 修正：加入 :disabled="item.completed"，並改寫 :class 讓鎖定時呈現反灰狀態 -->
-                            <button @click="deleteItineraryItem(idx)" :disabled="item.completed"
-                                    class="transition-all duration-200"
-                                    :class="item.completed ? 'opacity-50 cursor-not-allowed text-gray-400' : 'active:scale-90 text-text-sub hover:text-red-400'">
-                                <i class="fa-solid fa-trash-can mr-1"></i>刪除
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <p v-if="currentItinerary.length === 0" class="text-center text-xs text-text-sub py-8">這天還沒有安排行程，點擊下方新增吧！</p>
-
-                <button v-if="checkPermission('canManageItinerary')" @click="openAddModal" class="w-full py-4 border-2 border-dashed rounded-2xl text-sm font-medium active:scale-95 transition-transform flex items-center justify-center space-x-2 hover:opacity-80"
-                        :style="{ borderColor: currentThemeColor, color: currentThemeColor, backgroundColor: '#FAF6EB' }">
-                    <i class="fa-solid fa-plus-circle"></i> <span>新增行程目的地</span>
-                </button>
-            </div>
-
-            <div v-show="dayViewMode === 'map'" class="space-y-4">
-                <div class="card-container text-xs text-text-sub space-y-2">
-                    <div class="flex items-center space-x-2">
-                        <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-                        <span class="font-semibold text-text-main">Google 地圖導航</span>
-                    </div>
-                    <p>自動轉換並定位今日景點 (需確認已掛載正確的 API Key)。</p>
-                </div>
-                
-                <div class="w-full h-80 rounded-2xl border border-gray-200 shadow-inner overflow-hidden relative">
-                    <div id="map-canvas" class="w-full h-full bg-[#F4EFE6]"></div>
+                    // OSM 會回傳極度詳細的完整門牌地址 (例如: 臺灣桃園國際機場, 9, 航站南路...)
+                    // 為了讓天氣標籤乾淨漂亮，我們直接切斷，只取逗號分隔的「第一個」主要名稱！
+                    const nameParts = displayName.split(', ');
+                    displayName = nameParts[0];
                     
-                    <div v-if="isMapLoading" class="absolute inset-0 bg-[#FAF6EB]/80 z-[20] flex flex-col items-center justify-center">
-                        <i class="fa-solid fa-spinner fa-spin text-2xl text-morandi mb-2"></i>
-                        <p class="text-xs font-bold text-text-main">{{ loadingMapMsg }}</p>
-                        <p class="text-[10px] text-text-sub mt-2">請稍候...</p>
-                    </div>
-                </div>
-
-                <div class="flex justify-center">
-                    <button @click="triggerGeolocation" class="btn-secondary text-xs px-4 py-2">
-                        <i class="fa-solid fa-location-crosshairs text-blue-500 mr-2"></i>
-                        <span>顯示我現在的位置 (GPS)</span>
-                    </button>
-                </div>
-            </div>
-
-        </div>
-
-        <div v-if="currentTab === 'info'" class="space-y-4">
-            <div class="flex items-center justify-between border-b border-gray-100 pb-2">
-                <h2 class="text-base font-bold text-text-main flex items-center">
-                    <i class="fa-solid fa-circle-info mr-2 text-morandi-dark"></i>旅程資訊隨身站
-                </h2>
-                <button v-if="checkPermission('canManageInfo')" @click="openAddInfoModal" class="text-xs text-morandi-dark bg-morandi-light px-4 py-1 rounded-full font-medium active:scale-95 transition-transform hover:bg-morandi-accent">
-                    + 新增資訊
-                </button>
-            </div>
-
-            <div v-for="(cat, catName) in infoStation" :key="catName" class="card-container space-y-4">
-                <h3 class="text-sm font-bold text-morandi-deep flex items-center border-b border-gray-100 pb-2">
-                    <i :class="getInfoCatIcon(catName)" class="mr-2 opacity-80"></i>{{ catName }}
-                </h3>
-                <div class="space-y-2">
-                    <div v-for="(info, iIdx) in cat" :key="iIdx" class="bg-[#F4EFE6] p-4 rounded-xl relative group" :class="{'opacity-60': info.done}">
-                        <div class="flex justify-between items-start">
-                            <!-- 新增 min-w-0 防止 flex-1 寬度撐破邊界 -->
-                            <label class="flex items-start space-x-3 cursor-pointer flex-1 min-w-0">
-                                <input type="checkbox" v-model="info.done" class="w-4 h-4 rounded text-morandi focus:ring-morandi border-gray-300 mt-0.5 flex-shrink-0">
-                                <!-- 新增 min-w-0 讓內部文字能夠正確計算縮排空間 -->
-                                <div class="flex-1 min-w-0">
-                                    <!-- 新增 break-words 強制長字串或網址斷行 -->
-                                    <h4 class="text-xs font-bold text-text-main break-words" :class="{'line-through text-text-sub': info.done}">{{ info.title }}</h4>
-                                    <!-- 新增 break-words 強制長字串或網址斷行 -->
-                                    <p class="text-xs text-text-sub mt-1 whitespace-pre-wrap break-words" :class="{'line-through': info.done}">{{ info.content }}</p>
-                                </div>
-                            </label>
-                            <div v-if="checkPermission('canManageInfo')" class="flex space-x-3 ml-2 flex-shrink-0">
-                                <button @click="openEditInfoModal(catName, iIdx)" class="btn-icon text-gray-300 hover:text-morandi-dark text-xs p-1">
-                                    <i class="fa-solid fa-pen"></i>
-                                </button>
-                                <button @click="deleteInfoItem(catName, iIdx)" class="btn-icon text-gray-300 hover:text-red-400 text-xs p-1">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
+                    const lat = parseFloat(item.lat);
+                    const lon = parseFloat(item.lon);
+                    
+                    return `
+                        <div class="px-4 py-3 hover:bg-[#F4EFE6] cursor-pointer transition-colors flex items-center justify-between border-b border-gray-50 last:border-0"
+                             onclick="window.WeatherManager.addCity('${displayName}', ${lat}, ${lon})">
+                            <div class="flex flex-col">
+                                <span class="text-sm font-bold text-text-main">${displayName}</span>
+                                <span class="text-[10px] text-text-sub mt-0.5">緯度: ${lat.toFixed(2)}, 經度: ${lon.toFixed(2)}</span>
                             </div>
+                            <i class="fa-solid fa-plus text-morandi"></i>
                         </div>
-                    </div>
-                    <p v-if="cat.length === 0" class="text-xs text-text-sub text-center py-4 opacity-60">暫無內容</p>
-                </div>
-            </div>
-            
-            <div class="flex justify-center pt-4 pb-4">
-                <span class="text-[10px] text-gray-500 font-mono tracking-widest">v{{ appVersion }}</span>
-            </div>
-        </div>
+                    `;
+                }).join('');
+            } else {
+                resultsContainer.innerHTML = `<div class="p-4 text-center text-xs text-gray-500">查無相符的地點</div>`;
+            }
+        } catch (error) {
+            resultsContainer.innerHTML = `<div class="p-4 text-center text-xs text-red-400">網路連線異常，搜尋失敗</div>`;
+        }
+    },
 
-        <!-- 天氣總覽視圖 -->
-        <div v-show="currentTab === 'weather'" class="space-y-4 pb-10" id="weather-view-container">
-            <div class="flex items-center justify-between border-b border-gray-100 pb-2">
-                <h2 class="text-base font-bold text-text-main flex items-center">
-                    <i class="fa-solid fa-cloud-sun mr-2 text-morandi-dark"></i>全區天氣總覽
-                </h2>
-            </div>
-            
-            <!-- 🌟 新增：手動搜尋城市輸入框 (iOS 風格) -->
-            <div class="relative mb-3 mx-1">
-                <div class="flex items-center bg-white border border-gray-200 rounded-2xl px-4 py-2 shadow-sm focus-within:border-morandi focus-within:ring-1 focus-within:ring-morandi transition-all">
-                    <i class="fa-solid fa-magnifying-glass text-gray-400 mr-2"></i>
-                    <input type="text" id="weather-search-input" placeholder="搜尋城市或機場..." 
-                           class="flex-1 bg-transparent outline-none text-sm text-text-main" 
-                           oninput="window.WeatherManager.handleSearchInput(event)"
-                           onfocus="window.WeatherManager.showSearchResults()">
-                    <button id="weather-search-clear" onclick="window.WeatherManager.clearSearch()" class="hidden text-gray-400 hover:text-gray-600 ml-2">
-                        <i class="fa-solid fa-circle-xmark"></i>
-                    </button>
-                </div>
-                <!-- 搜尋結果下拉選單 -->
-                <div id="weather-search-results" class="absolute w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-[100] hidden max-h-60 overflow-y-auto divide-y divide-gray-100">
-                </div>
-            </div>
-
-            <!-- 天氣地點標籤列 (由 weather.js 動態生成) -->
-            <div id="weather-location-tabs" class="flex space-x-3 overflow-x-auto hide-scrollbar pb-3 pt-1">
-                <!-- JS 動態注入 -->
-            </div>
-
-            <!-- 天氣詳細內容卡片 (由 weather.js 動態生成) -->
-            <div id="weather-forecast-content" class="mt-2 min-h-[300px]">
-                <div class="text-center text-xs text-text-sub py-8">
-                    <i class="fa-solid fa-spinner fa-spin text-2xl text-morandi mb-2"></i>
-                    <p>正在分析行程與載入天氣資訊...</p>
-                </div>
-            </div>
-        </div>
-
-    </main>
-
-    <nav class="absolute bottom-0 w-full bg-[#FAF6EB] border-t border-gray-200 flex justify-around pt-2 pb-4 z-30 shadow-lg">
-        <button @click="handleTabChange(days.length > 0 ? 'day-0' : 'todo')" class="flex flex-col items-center btn-icon" :class="currentTab.startsWith('day-') ? 'text-morandi-dark font-semibold' : 'text-text-sub'">
-            <i class="fa-solid fa-calendar-alt text-base mb-0.5"></i>
-            <span class="text-[10px]">日常行程</span>
-        </button>
+    // 🌟 將選中的城市加入標籤列
+    addCity(name, lat, lon) {
+        if (!this.savedCities.find(c => c.name === name)) {
+            this.savedCities.push({ name, lat, lon });
+            this.syncToVue();
+        }
         
-        <button @click="handleTabChange('weather')" class="flex flex-col items-center btn-icon" :class="currentTab === 'weather' ? 'text-morandi-dark font-semibold' : 'text-text-sub'">
-            <i class="fa-solid fa-cloud-sun text-base mb-0.5"></i>
-            <span class="text-[10px]">天氣預報</span>
-        </button>
+        this.currentSelectedCity = name;
+        this.clearSearch();
+        this.renderTabs();
+        this.loadAndRenderForecast(name);
+    },
 
-        <button @click="handleTabChange('info')" class="flex flex-col items-center btn-icon" :class="currentTab === 'info' ? 'text-morandi-dark font-semibold' : 'text-text-sub'">
-            <i class="fa-solid fa-circle-nodes text-base mb-0.5"></i>
-            <span class="text-[10px]">隨身資訊</span>
-        </button>
-    </nav>
+    // 🌟 刪除城市
+    removeCity(event, name) {
+        event.stopPropagation();
+        this.savedCities = this.savedCities.filter(c => c.name !== name);
+        this.syncToVue();
+        
+        if (this.currentSelectedCity === name) {
+            this.currentSelectedCity = this.savedCities.length > 0 ? this.savedCities[0].name : null;
+        }
+        
+        this.renderTabs();
+        if (this.currentSelectedCity) {
+            this.loadAndRenderForecast(this.currentSelectedCity);
+        } else {
+            document.getElementById('weather-forecast-content').innerHTML = `
+                <div class="text-center text-xs text-text-sub py-12 bg-[#FAF6EB] rounded-2xl shadow-sm border border-gray-200 mx-2">
+                    <i class="fa-solid fa-cloud-sun text-3xl text-gray-300 mb-3"></i>
+                    <p class="font-bold text-gray-500 text-sm mb-1">城市清單為空</p>
+                    <p class="text-[10px] opacity-70 mt-2">請使用上方搜尋列加入天氣預報地點</p>
+                </div>`;
+        }
+    },
 
-    <!-- 點擊作用中 Tab 喚出的底部動作選單 -->
-    <div v-if="showDayActionMenu" class="absolute inset-0 bg-black/40 z-[9999] flex items-end justify-center transition-all">
-        <div class="bg-[#FAF6EB] w-full max-w-md rounded-t-3xl p-6 pb-8 space-y-3 shadow-2xl transition-transform duration-300 transform translate-y-0">
-            <div class="flex justify-center mb-2">
-                <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
-            </div>
-            <h3 class="font-bold text-text-main text-center text-base mb-4">Day {{ actionDayIndex + 1 }} 操作選單</h3>
+    // 渲染城市水平標籤列 (支援滑鼠懸停顯示刪除按鈕 X)
+    renderTabs() {
+        const container = document.getElementById('weather-location-tabs');
+        if(!container) return;
+        
+        container.classList.remove('overflow-x-auto', 'space-x-3', 'hide-scrollbar');
+        container.classList.add('flex-wrap', 'gap-3', 'flex');
+        
+        container.innerHTML = this.savedCities.map(cityObj => {
+            const city = cityObj.name;
+            const isSelected = this.currentSelectedCity === city;
+            // 縮短名稱以節省版面 (例: 日本 京都府 宇治市 -> 宇治市)
+            const shortName = city.length > 12 ? city.slice(-10) : city; 
             
-            <button @click="triggerEditFromMenu" class="w-full bg-[#F4EFE6] text-text-main font-bold py-4 rounded-2xl flex items-center justify-center active:scale-95 transition-transform border border-gray-200">
-                <i class="fa-solid fa-pen mr-2 text-morandi-dark"></i> 修改日期
-            </button>
-            
-            <button @click="confirmDeleteDay" class="w-full bg-red-50 text-red-500 font-bold py-4 rounded-2xl flex items-center justify-center active:scale-95 transition-transform border border-red-100 mt-2">
-                <i class="fa-solid fa-trash-can mr-2"></i> 刪除此天數
-            </button>
-            
-            <button @click="showDayActionMenu = false" class="w-full bg-gray-200 text-text-sub font-bold py-4 rounded-2xl flex items-center justify-center active:scale-95 transition-transform mt-4">
-                <i class="fa-solid fa-xmark mr-2"></i> 取消
-            </button>
-        </div>
-    </div>
-
-    <div v-if="showEditDayModal" class="absolute inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4">
-        <div class="bg-[#FAF6EB] w-full max-w-sm rounded-3xl p-6 space-y-4 shadow-xl">
-            <h3 class="font-bold text-text-main text-base">修改 Day {{ editDayIndex + 1 }} 日期</h3>
-            <div class="space-y-4 text-xs">
-                <div>
-                    <label class="block text-text-sub mb-2 font-medium">請輸入新日期</label>
-                    <input type="text" v-model="editDayDate" @keyup.enter="saveDayDate" placeholder="例如：10/25 或 第1天" class="input-field w-full">
+            return `
+                <div onclick="window.WeatherManager.selectLocation('${city}')" 
+                     class="group px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all duration-300 shadow-sm flex items-center
+                     ${isSelected ? 'bg-[#1e293b] text-white' : 'bg-white text-text-sub border border-gray-200 hover:bg-[#F4EFE6]'}"
+                     style="white-space: nowrap;">
+                    ${shortName}
+                    <button onclick="window.WeatherManager.removeCity(event, '${city}')" 
+                            class="ml-2 w-4 h-4 rounded-full flex items-center justify-center transition-colors 
+                            ${isSelected ? 'hover:bg-slate-500 text-slate-300 hover:text-white' : 'hover:bg-gray-200 text-gray-300 hover:text-red-400 opacity-0 group-hover:opacity-100'}">
+                        <i class="fa-solid fa-xmark text-[10px]"></i>
+                    </button>
                 </div>
-            </div>
-            <div class="flex space-x-4 text-xs pt-4">
-                <button @click="showEditDayModal = false" class="btn-secondary flex-1 border-gray-200 text-text-sub hover:bg-gray-100">取消</button>
-                <button @click="saveDayDate" class="btn-primary flex-1">儲存</button>
-            </div>
-        </div>
-    </div>
+            `;
+        }).join('');
+    },
 
-    <div v-if="showShoppingModal" class="absolute inset-0 bg-black/40 z-[9999] flex items-start justify-center pt-[10vh] p-4 transition-all">
-        <div class="bg-[#FAF6EB] w-full max-w-sm rounded-3xl max-h-[80vh] flex flex-col p-6 shadow-2xl">
-            <div class="flex justify-between items-center border-b border-gray-200 pb-4">
-                <h3 class="font-bold text-text-main flex items-center text-base">
-                    <i class="fa-solid fa-basket-shopping text-morandi-dark mr-2"></i>代買購物清單
-                </h3>
-                <button @click="showShoppingModal = false" class="btn-icon text-lg hover:text-text-main"><i class="fa-solid fa-xmark"></i></button>
-            </div>
+    selectLocation(city) {
+        this.currentSelectedCity = city;
+        this.renderTabs();
+        this.loadAndRenderForecast(city);
+    },
+
+    // 載入預報資料並渲染內容
+    async loadAndRenderForecast(city) {
+        const content = document.getElementById('weather-forecast-content');
+        
+        if (this.forecastCache[city]) {
+            this.renderForecastUI(city, this.forecastCache[city]);
+            return;
+        }
+
+        content.innerHTML = `
+            <div class="text-center text-xs text-text-sub py-12 flex flex-col items-center bg-white rounded-2xl shadow-sm border border-gray-100 mx-2">
+                <i class="fa-solid fa-spinner fa-spin text-3xl text-morandi mb-4"></i>
+                <p class="font-bold text-sm text-text-main">氣象衛星連線中...</p>
+                <p class="text-[10px] mt-1 opacity-70">正在獲取「${city}」的 14 天預報</p>
+            </div>`;
+
+        // 從 savedCities 中直接反向找回經緯度
+        let targetLat = null;
+        let targetLon = null;
+        const cityObj = this.savedCities.find(c => c.name === city);
+        if (cityObj) {
+            targetLat = cityObj.lat;
+            targetLon = cityObj.lon;
+        }
+
+        if (targetLat === null || targetLon === null) {
+            content.innerHTML = `
+                <div class="text-center text-xs text-red-500 py-10 bg-red-50 border border-red-100 rounded-2xl mx-2 shadow-sm">
+                    <i class="fa-solid fa-location-dot text-2xl mb-2"></i>
+                    <p class="font-bold mb-1">無法定位地理座標</p>
+                    <p class="text-[10px] opacity-80 mt-1">地理庫查無「${city}」的準確位置。<br>請嘗試修改行程中的景點名稱使其更精確。</p>
+                </div>`;
+            return;
+        }
+
+        try {
+            // 呼叫 Open-Meteo 獲取未來預報與降雨機率
+            const weatherResp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${targetLat}&longitude=${targetLon}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&temperature_unit=celsius&timezone=auto&forecast_days=14`);
+            const weatherData = await weatherResp.json();
             
-           <div v-if="checkPermission('canManageShopping')" class="flex space-x-2 mt-4">
-                <input v-model="newShoppingItem" @keyup.enter="addShoppingItem" type="text" placeholder="輸入想購買的商品/藥妝..." class="input-field flex-1">
-                <button @click="addShoppingItem" class="btn-primary text-xs">新增</button>
-            </div>
+            if (weatherData && weatherData.daily) {
+                this.forecastCache[city] = weatherData.daily;
+                this.renderForecastUI(city, weatherData.daily);
+            } else {
+                throw new Error("API 無效回應");
+            }
+        } catch (err) {
+            content.innerHTML = `
+                <div class="text-center text-xs text-red-500 py-10 bg-red-50 border border-red-100 rounded-2xl mx-2 shadow-sm">
+                    <i class="fa-solid fa-cloud-bolt text-2xl mb-2"></i>
+                    <p class="font-bold mb-1">取得天氣失敗</p>
+                    <p class="text-[10px] opacity-80">請檢查網路連線或稍後再試。</p>
+                </div>`;
+        }
+    },
 
-            <div class="flex-1 overflow-y-auto hide-scrollbar mt-4 space-y-2">
-                <div v-for="(shop, sIdx) in shoppingList" :key="sIdx" class="flex items-center justify-between p-4 bg-[#F4EFE6] rounded-xl" :class="{'opacity-50': shop.bought && editingShoppingIndex !== sIdx}">
-                    
-                    <!-- 編輯模式 -->
-                    <div v-if="editingShoppingIndex === sIdx" class="flex-1 flex items-center space-x-2">
-                        <input v-model="editingShoppingText" @keyup.enter="saveShoppingEdit(sIdx)" type="text" class="input-field flex-1 py-1 px-2 text-xs bg-white border-morandi">
-                        <button @click="saveShoppingEdit(sIdx)" class="btn-icon text-morandi-dark hover:text-morandi-deep p-1"><i class="fa-solid fa-check text-xs"></i></button>
-                        <button @click="cancelShoppingEdit" class="btn-icon text-gray-400 hover:text-gray-600 p-1"><i class="fa-solid fa-xmark text-xs"></i></button>
-                    </div>
+    // UI 介面渲染 (維持原有的深色質感介面不變)
+    renderForecastUI(loc, dailyData) {
+        const content = document.getElementById('weather-forecast-content');
+        if (!content) return;
 
-                    <!-- 一般顯示模式 -->
-                    <template v-else>
-                        <label class="flex items-center space-x-4 cursor-pointer flex-1">
-                            <input type="checkbox" v-model="shop.bought" class="w-4 h-4 rounded text-morandi focus:ring-morandi border-gray-300">
-                            <span class="text-xs text-text-main" :class="{'line-through': shop.bought}">{{ shop.text }}</span>
-                        </label>
-                        <div v-if="checkPermission('canManageShopping')" class="flex space-x-2">
-                            <button @click="startEditShopping(sIdx)" class="btn-icon text-gray-300 hover:text-morandi-dark p-1">
-                                <i class="fa-solid fa-pen text-xs"></i>
-                            </button>
-                            <button @click="deleteShoppingItem(sIdx)" class="btn-icon text-gray-300 hover:text-red-400 p-1">
-                                <i class="fa-solid fa-trash-can text-xs"></i>
-                            </button>
+        const dates = dailyData.time;
+        const maxTemps = dailyData.temperature_2m_max;
+        const minTemps = dailyData.temperature_2m_min;
+        const codes = dailyData.weather_code;
+        const pops = dailyData.precipitation_probability_max; 
+
+        // 格式化日期 MM/DD
+        const todayStr = dates[0].substring(5).replace('-','/');
+        const tomorrowStr = dates[1].substring(5).replace('-','/');
+
+        // 頂部 今日/明日 卡片
+        const topBanner = `
+            <div class="bg-[#1e293b] text-white rounded-2xl p-4 flex justify-around items-center shadow-lg mb-4 mx-1 mt-1 border border-[#334155]">
+                <div class="flex flex-col items-center flex-1 border-r border-[#334155]">
+                    <span class="text-xs text-slate-400 font-bold mb-2 tracking-widest"><i class="fa-regular fa-sun mr-1"></i>今日 ${todayStr}</span>
+                    <div class="flex items-center space-x-3 mb-1">
+                        <span class="text-4xl drop-shadow-md">${this.getWeatherInfo(codes[0]).icon}</span>
+                        <div class="flex flex-col">
+                            <span class="text-sm font-black text-red-400">${Math.round(maxTemps[0])}°</span>
+                            <span class="text-sm font-black text-blue-300">${Math.round(minTemps[0])}°</span>
                         </div>
-                    </template>
-                </div>
-                <p v-if="shoppingList.length === 0" class="text-center text-xs text-text-sub py-8">購物清單空空如也</p>
-            </div>
-        </div>
-    </div>
-
-    <div v-if="showItineraryModal" class="absolute inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4">
-        <div class="bg-[#FAF6EB] w-full max-w-sm rounded-3xl p-6 space-y-4 shadow-xl">
-            <h3 class="font-bold text-text-main text-base">{{ modalMode === 'add' ? '新增行程目的地' : '編輯行程目的地' }}</h3>
-            <div class="space-y-4 text-xs">
-                <div>
-                    <label class="block text-text-sub mb-2 font-medium">分類項目</label>
-                    <select v-model="modalData.category" class="input-field w-full">
-                        <option value="景點">⛩️ 景點</option>
-                        <option value="住宿">🏨 住宿</option>
-                        <option value="車站">🚉 車站</option>
-                        <option value="交通方式">🚇 交通方式</option>
-                        <option value="機場">🛫 機場</option>
-                        <option value="港口">🚢 港口</option>
-                        <option value="航班">✈️ 航班</option>
-                        <option value="餐廳">🍽️ 餐廳</option>
-                        <option value="備選餐廳">🍽️ 備選餐廳</option>
-                        <option value="購物">🛍️ 購物</option>
-                        <option value="其他">📍 其他</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-text-sub mb-2 font-medium">地點/名稱</label>
-                    <input type="text" v-model="modalData.location" @input="modalError = false" placeholder="輸入地點或地標名稱" class="input-field w-full" :class="{'input-error': modalError}">
-                    <span v-if="modalError" class="text-red-500 text-xs mt-1 block">地點為必填欄位</span>
-                </div>
-                <div>
-                    <label class="block text-text-sub mb-2 font-medium">行程備註</label>
-                    <textarea v-model="modalData.notes" rows="3" placeholder="填寫詳細交通方式、票券或注意事項..." class="input-field w-full resize-none"></textarea>
-                </div>
-            </div>
-            <div class="flex space-x-4 text-xs pt-4">
-                <button @click="showItineraryModal = false" class="btn-secondary flex-1 border-gray-200 text-text-sub hover:bg-gray-100">取消</button>
-                <button @click="saveItineraryItem" class="btn-primary flex-1">儲存</button>
-            </div>
-        </div>
-    </div>
-
-    <div v-if="showInfoModal" class="absolute inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4">
-        <div class="bg-[#FAF6EB] w-full max-w-sm rounded-3xl p-6 space-y-4 shadow-xl">
-            <h3 class="font-bold text-text-main text-base">{{ infoModalMode === 'edit' ? '編輯隨身站資訊' : '新增隨身站資訊' }}</h3>
-            <div class="space-y-4 text-xs">
-                <div>
-                    <label class="block text-text-sub mb-2 font-medium">歸類看板</label>
-                    <select v-model="infoModalData.category" class="input-field w-full" :disabled="infoModalMode === 'edit'">
-                        <option value="資訊整理">📋 資訊整理</option>
-                        <option value="備用參考景點">⛩️ 備用參考景點</option>
-                        <option value="緊急醫療">🚑 緊急醫療</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-text-sub mb-2 font-medium">標題</label>
-                    <input type="text" v-model="infoModalData.title" placeholder="例如：住宿通訊、外幣預算" class="input-field w-full">
-                </div>
-                <div>
-                    <label class="block text-text-sub mb-2 font-medium">內文細節</label>
-                    <textarea v-model="infoModalData.content" rows="4" placeholder="輸入詳細資訊..." class="input-field w-full resize-none"></textarea>
-                </div>
-            </div>
-            <div class="flex space-x-4 text-xs pt-4">
-                <button @click="showInfoModal = false" class="btn-secondary flex-1 border-gray-200 text-text-sub hover:bg-gray-100">取消</button>
-                <button @click="saveInfoItem" class="btn-primary flex-1">{{ infoModalMode === 'edit' ? '儲存修改' : '新增發布' }}</button>
-            </div>
-        </div>
-    </div>
-
-    <div v-if="showSyncModal" class="absolute inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4">
-        <div class="bg-[#FAF6EB] w-full max-w-sm rounded-3xl p-6 space-y-4 shadow-xl max-h-[90%] overflow-y-auto">
-            <div class="flex justify-between items-center border-b border-gray-200 pb-2">
-                <h3 class="font-bold text-text-main text-base"><i class="fa-solid fa-cloud mr-2 text-morandi-dark"></i>資料同步與轉移</h3>
-                <button @click="showSyncModal = false" class="btn-icon text-lg hover:text-text-main"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-
-            <div class="space-y-4">
-                <h4 class="text-sm font-bold text-morandi-deep border-b border-gray-100 pb-1">跨裝置本機轉移</h4>
-                <div class="grid grid-cols-2 gap-4 text-xs">
-                    <button @click="copySyncCode" class="btn-secondary px-2"><i class="fa-regular fa-copy mr-2"></i>複製代碼</button>
-                    <button @click="pasteSyncCode" class="btn-secondary px-2"><i class="fa-solid fa-paste mr-2"></i>貼上代碼</button>
-                    <button @click="downloadJSON" class="btn-secondary px-2"><i class="fa-solid fa-download mr-2"></i>匯出 JSON</button>
-                    <label class="btn-secondary px-2 cursor-pointer m-0 text-center flex items-center justify-center">
-                        <i class="fa-solid fa-file-import mr-2"></i>匯入 JSON
-                        <input type="file" accept=".json" class="hidden" @change="uploadJSON">
-                    </label>
-                </div>
-            </div>
-
-            <div class="space-y-4 mt-4">
-                <h4 class="text-sm font-bold text-morandi-deep border-b border-gray-100 pb-1">一鍵建立新行程</h4>
-                <div class="flex flex-col space-y-2 mb-2">
-                    <label class="flex items-center space-x-2 cursor-pointer text-text-main text-xs bg-[#F4EFE6] p-2 rounded-xl border border-gray-200">
-                        <input type="checkbox" v-model="keepTemplates" class="w-4 h-4 rounded text-morandi focus:ring-morandi border-gray-300">
-                        <span>保留當前待辦與購物清單 (智慧樣板)</span>
-                    </label>
-                    <button @click="createNewTrip" class="btn-danger w-full">
-                        <i class="fa-solid fa-broom mr-2"></i>清空並建立全新行程
-                    </button>
-                </div>
-            </div>
-
-            <div class="space-y-4 mt-4">
-                <h4 class="text-sm font-bold text-morandi-deep border-b border-gray-100 pb-1 mt-4">Google 雲端多行程同步</h4>
-                <template v-if="!isTravelGuest">
-                    <p class="text-[10px] text-text-sub">目前存檔名稱：「<span class="font-bold text-morandi-dark">{{ tripTitle }}</span>」</p>
-                    <div>
-                        <input type="text" v-model="gasUrl" @input="gasUrlError = false" placeholder="請輸入您的 GAS 網頁應用程式網址"
-                               class="input-field w-full" :class="{'input-error': gasUrlError}">
-                        <span v-if="gasUrlError" class="text-red-500 text-xs mt-1 block">請輸入有效網址以進行同步</span>
                     </div>
-                </template>
-
-                <div class="flex flex-col space-y-2 text-xs">
-                    <button v-if="!isTravelGuest" @click="saveToCloud" :disabled="isSyncing" class="btn-primary w-full">
-                        <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin mr-1"></i>
-                        <i v-else class="fa-solid fa-cloud-arrow-up mr-1"></i>備份
-                    </button>
-                    <button @click="fetchCloudList" :disabled="isSyncing" class="btn-secondary w-full">
-                        <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin mr-1"></i>
-                        <i v-else class="fa-solid fa-sync mr-1"></i>讀取目錄
-                    </button>
-                    <button v-if="!isTravelGuest" @click="archiveToCloud" :disabled="isSyncing || tripTitle.startsWith('[已封存]')" class="btn-secondary w-full border-red-200 text-red-500 hover:bg-red-50" :class="{'opacity-50 cursor-not-allowed': tripTitle.startsWith('[已封存]')}">
-                        <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin mr-1"></i>
-                        <i v-else class="fa-solid fa-box-archive mr-1"></i>封存
-                    </button>
-                    <button v-if="!isTravelGuest" @click="handleUnarchive" :disabled="isSyncing" class="btn-secondary w-full border-yellow-400 text-yellow-600 hover:bg-yellow-50">
-                        <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin mr-1"></i>
-                        <i v-else class="fa-solid fa-box-open mr-1"></i>解開封存
-                    </button>
+                    <span class="text-[11px] text-slate-300 bg-[#334155] px-2 py-0.5 rounded-full mt-1 flex items-center">
+                        ${this.getWeatherInfo(codes[0]).desc} <span class="mx-1">|</span> <i class="fa-solid fa-droplet text-blue-400 mr-1"></i>${pops[0] || 0}%
+                    </span>
                 </div>
-
-                <div v-if="showUnarchiveSelector" class="flex space-x-2 text-xs mt-4 bg-yellow-50 p-2 rounded-xl border border-yellow-200 animate-slide-up">
-                    <select v-model="selectedArchivedTrip" class="input-field flex-1 bg-[#FAF6EB]">
-                        <option disabled value="">請選擇要解封的行程</option>
-                        <option v-for="trip in archivedTrips" :key="trip" :value="trip">{{ trip }}</option>
-                    </select>
-                    <button @click="executeUnarchive(selectedArchivedTrip)" :disabled="!selectedArchivedTrip || isSyncing" class="btn-primary px-4 bg-yellow-500 hover:bg-yellow-600 border-none">
-                        <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin"></i>
-                        <span v-else>確認解封</span>
-                    </button>
+                
+                <div class="flex flex-col items-center flex-1">
+                    <span class="text-xs text-slate-400 font-bold mb-2 tracking-widest"><i class="fa-solid fa-arrow-right mr-1"></i>明日 ${tomorrowStr}</span>
+                    <div class="flex items-center space-x-3 mb-1">
+                        <span class="text-4xl drop-shadow-md">${this.getWeatherInfo(codes[1]).icon}</span>
+                        <div class="flex flex-col">
+                            <span class="text-sm font-black text-red-400">${Math.round(maxTemps[1])}°</span>
+                            <span class="text-sm font-black text-blue-300">${Math.round(minTemps[1])}°</span>
+                        </div>
+                    </div>
+                    <span class="text-[11px] text-slate-300 bg-[#334155] px-2 py-0.5 rounded-full mt-1 flex items-center">
+                         ${this.getWeatherInfo(codes[1]).desc} <span class="mx-1">|</span> <i class="fa-solid fa-droplet text-blue-400 mr-1"></i>${pops[1] || 0}%
+                    </span>
                 </div>
-
-                <div v-if="cloudTrips.length > 0" class="flex space-x-2 text-xs mt-4 bg-[#F4EFE6] p-2 rounded-xl border border-gray-200 animate-slide-up">
-                    <select v-model="selectedCloudTrip" class="input-field flex-1 bg-[#FAF6EB]">
-                        <option disabled value="">請選擇要下載的雲端行程</option>
-                        <option v-for="trip in cloudTrips" :key="trip" :value="trip">{{ trip }}</option>
-                    </select>
-                    <button @click="loadSelectedCloudTrip" :disabled="!selectedCloudTrip || isSyncing" class="btn-primary px-4">
-                        <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin"></i>
-                        <i v-else class="fa-solid fa-download"></i>
-                    </button>
-                    <!-- 新增解開封存按鈕，放在下載按鈕旁邊 -->
-                    <button v-if="selectedCloudTrip && selectedCloudTrip.startsWith('[已封存]')" @click="unarchiveToCloud" :disabled="isSyncing" class="btn-secondary px-4 border-yellow-300 text-yellow-600 hover:bg-yellow-50">
-                        <i v-if="isSyncing" class="fa-solid fa-spinner fa-spin"></i>
-                        <i v-else class="fa-solid fa-box-open"></i>
-                    </button>
-                </div>
-
-                <p v-if="syncMessage" class="text-[11px] text-center mt-2 font-bold" :class="syncSuccess ? 'text-teal-600' : 'text-red-500'">{{ syncMessage }}</p>
             </div>
-            </div>
-    </div>
+        `;
 
-</div>
-
-<script src="./js/config.js"></script>
-<script src="./js/utils.js"></script>
-<script src="./js/ui.js"></script>
-<script src="./js/api.js"></script>
-<script src="./js/modules/map.js"></script>
-<script src="./js/modules/weather.js"></script>
-<script src="./js/auth.js"></script>
-<script src="./js/permission.js"></script>
-<script src="./js/modules/record.js"></script>
-<script>
-    let vueAppInstance = null;
-
-// 【新增前後辨識用：新增後3行】// Vue 實體與相關邏輯已抽離至 js/app.js
-
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
-                .then(registration => { console.log('PWA ServiceWorker 註冊成功'); })
-                .catch(error => { console.log('PWA ServiceWorker 註冊失敗:', error); });
-        });
+        // 底部 未來 2 週預報列表
+        let listHtml = `
+            <div class="bg-[#1e293b] rounded-2xl p-5 shadow-lg border border-[#334155] mx-1">
+                <h3 class="text-slate-200 font-bold text-sm mb-4 pb-3 border-b border-[#334155] tracking-widest">
+                    <i class="fa-solid fa-calendar-days mr-2 text-slate-400"></i>2週間天氣
+                </h3>
+                <div class="space-y-4">
+        `;
+                        
+        for (let i = 2; i < dates.length; i++) {
+            const dateObj = new Date(dates[i]);
+            const dayOfWeek = ['日', '一', '二', '三', '四', '五', '六'][dateObj.getDay()];
+            const dayColor = (dayOfWeek === '六') ? 'text-blue-300' : (dayOfWeek === '日' ? 'text-red-400' : 'text-slate-300');
+            const dateLabel = `${dates[i].substring(5).replace('-','/')}(<span class="${dayColor}">${dayOfWeek}</span>)`;
+            
+            listHtml += `
+                <div class="flex items-center justify-between text-white text-xs border-b border-[#334155] pb-3 last:border-0 last:pb-0">
+                    <span class="w-16 font-medium tracking-wider text-slate-300">${dateLabel}</span>
+                    <div class="flex items-center space-x-2 w-16">
+                        <span class="text-2xl drop-shadow-sm w-8 text-center">${this.getWeatherInfo(codes[i]).icon}</span>
+                    </div>
+                    <div class="flex w-16 justify-center space-x-4">
+                        <span class="text-red-400 font-bold text-sm">${Math.round(maxTemps[i])}</span>
+                        <span class="text-blue-300 font-bold text-sm">${Math.round(minTemps[i])}</span>
+                    </div>
+                    <span class="w-12 text-right text-slate-400 font-medium">
+                        <i class="fa-solid fa-droplet text-blue-500 mr-1 text-[10px]"></i>${pops[i] || 0}%
+                    </span>
+                </div>
+            `;
+        }
+        
+        listHtml += `</div></div>`;
+        content.innerHTML = topBanner + listHtml;
     }
-</script>
-<script src="./js/app.js"></script>
-</body>
-</html>
+};
