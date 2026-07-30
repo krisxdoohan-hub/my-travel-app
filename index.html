@@ -300,9 +300,13 @@
                             :class="{'line-through text-text-sub': item.completed, 'text-text-main': !item.completed}">
                             {{ item.location }}
                         </h3>
-                        <p v-if="item.notes" class="text-xs mt-2 whitespace-pre-wrap p-2 rounded-lg border text-text-sub bg-[#F4EFE6] border-gray-100">
-                            <i class="fa-regular fa-sticky-note mr-2 opacity-60"></i>{{ item.notes }}
-                        </p>
+                        <!-- 內文排版優化：支援點擊開啟專注閱讀、標籤化 -->
+                        <div v-if="item.notes" @click="openReadMode(item.location, item.notes)" class="mt-3 p-3 rounded-xl border bg-white border-gray-200 cursor-pointer hover:shadow-md hover:border-morandi/50 transition-all active:scale-[0.98]">
+                            <div class="text-sm leading-[1.8] text-gray-800 break-words whitespace-pre-wrap" v-html="formatTextToHTML(item.notes)"></div>
+                            <div class="text-right mt-3 border-t border-gray-100 pt-2">
+                                <span class="text-xs text-morandi font-medium bg-morandi-light/30 px-3 py-1 rounded-full shadow-sm"><i class="fa-solid fa-expand mr-1"></i>點擊全螢幕閱讀</span>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="flex justify-between items-center mt-4 pt-2 border-t border-gray-100 pl-8">
@@ -392,9 +396,16 @@
                                 <!-- 新增 min-w-0 讓內部文字能夠正確計算縮排空間 -->
                                 <div class="flex-1 min-w-0">
                                     <!-- 新增 break-words 強制長字串或網址斷行 -->
-                                    <h4 class="text-xs font-bold text-text-main break-words" :class="{'line-through text-text-sub': info.done}">{{ info.title }}</h4>
-                                    <!-- 新增 break-words 強制長字串或網址斷行 -->
-                                    <p class="text-xs text-text-sub mt-1 whitespace-pre-wrap break-words" :class="{'line-through': info.done}">{{ info.content }}</p>
+                                    <h4 class="text-sm font-bold text-gray-800 break-words" :class="{'line-through text-text-sub': info.done}">{{ info.title }}</h4>
+                                    <!-- 內文排版優化：支援點擊開啟專注閱讀 (加上 .stop.prevent 避免觸發核取方塊) -->
+                                    <div @click.stop.prevent="openReadMode(info.title, info.content)" 
+                                         class="text-sm text-gray-800 mt-2 whitespace-pre-wrap break-words leading-[1.8] cursor-pointer bg-white p-3 rounded-xl border border-gray-200 hover:shadow-md hover:border-morandi/50 transition-all active:scale-[0.98]" 
+                                         :class="{'line-through opacity-60': info.done}">
+                                        <div v-html="formatTextToHTML(info.content)"></div>
+                                        <div class="text-right mt-3 border-t border-gray-100 pt-2">
+                                            <span class="text-xs text-morandi font-medium bg-morandi-light/30 px-3 py-1 rounded-full shadow-sm"><i class="fa-solid fa-expand mr-1"></i>全螢幕閱讀</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </label>
                             <div v-if="checkPermission('canManageInfo')" class="flex space-x-3 ml-2 flex-shrink-0">
@@ -715,6 +726,19 @@
                 <p v-if="syncMessage" class="text-[11px] text-center mt-2 font-bold" :class="syncSuccess ? 'text-teal-600' : 'text-red-500'">{{ syncMessage }}</p>
             </div>
             </div>
+    </div>
+
+    <!-- 🌟 新增：專注閱讀模式 Modal (全螢幕乾淨白底黑大字，專為易讀性設計) -->
+    <div v-if="showReadModal" class="fixed inset-0 bg-white z-[99999] flex flex-col transition-all overflow-hidden animate-slide-up">
+        <div class="flex justify-between items-center bg-[#FAF6EB] p-4 shadow-sm border-b border-gray-200" style="padding-top: calc(1rem + env(safe-area-inset-top, 0px));">
+            <h3 class="font-bold text-lg text-gray-900 flex-1 truncate pr-4 pl-2"><i class="fa-solid fa-book-open text-morandi mr-2"></i>{{ readModalData.title }}</h3>
+            <button @click="showReadModal = false" class="bg-gray-200 text-gray-600 hover:bg-gray-800 rounded-full w-10 h-10 flex items-center justify-center transition-colors shadow-sm active:scale-90">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6 bg-white pb-20 relative">
+            <div class="text-[17px] text-gray-900 leading-[2.2] tracking-wide break-words whitespace-pre-wrap" v-html="formatTextToHTML(readModalData.content)"></div>
+        </div>
     </div>
 
 </div>
