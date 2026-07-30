@@ -46,11 +46,12 @@ window.WeatherManager = {
         if (this.currentSelectedCity) {
             this.loadAndRenderForecast(this.currentSelectedCity);
         } else {
+            const isGuest = window.vueAppInstance ? window.vueAppInstance.isTravelGuest : false;
             contentContainer.innerHTML = `
                 <div class="text-center text-xs text-text-sub py-12 bg-[#FAF6EB] rounded-2xl shadow-sm border border-gray-200 mx-2">
                     <i class="fa-solid fa-location-dot text-3xl text-gray-300 mb-3"></i>
                     <p class="font-bold text-gray-500 text-sm mb-1">尚未加入任何城市</p>
-                    <p class="text-[10px] opacity-70 mt-2">請使用上方搜尋列加入天氣預報地點</p>
+                    <p class="text-[10px] opacity-70 mt-2">${isGuest ? '目前無天氣地點資料' : '請使用上方搜尋列加入天氣預報地點'}</p>
                 </div>`;
         }
     },
@@ -159,6 +160,13 @@ window.WeatherManager = {
     // 🌟 刪除城市
     removeCity(event, name) {
         event.stopPropagation();
+
+        // 防止訪客強行呼叫
+        const isGuest = window.vueAppInstance ? window.vueAppInstance.isTravelGuest : false;
+        if (isGuest) {
+            alert('一般訪客權限無法刪除天氣資訊。');
+            return;
+        }
         
         // 加入防呆確認彈窗
         if (!confirm(`確定要刪除「${name}」的天氣資訊嗎？`)) {
@@ -193,24 +201,30 @@ window.WeatherManager = {
         container.classList.remove('overflow-x-auto', 'space-x-3', 'hide-scrollbar');
         container.classList.add('flex-wrap', 'gap-3', 'flex');
         
+        const isGuest = window.vueAppInstance ? window.vueAppInstance.isTravelGuest : false;
+        
         container.innerHTML = this.savedCities.map(cityObj => {
             const city = cityObj.name;
             const isSelected = this.currentSelectedCity === city;
             // 縮短名稱以節省版面 (例: 日本 京都府 宇治市 -> 宇治市)
             const shortName = city.length > 12 ? city.slice(-10) : city; 
             
+            const deleteBtnHtml = isGuest ? '' : `
+                <div class="h-4 border-l pointer-events-none ${isSelected ? 'border-slate-600' : 'border-gray-300'}"></div>
+                <button onclick="window.WeatherManager.removeCity(event, '${city}')" 
+                        class="ml-2 w-8 h-8 rounded-full flex items-center justify-center transition-colors 
+                        ${isSelected ? 'hover:bg-slate-600 text-slate-300 hover:text-white' : 'hover:bg-gray-200 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100'}">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                </button>
+            `;
+
             return `
                 <div onclick="window.WeatherManager.selectLocation('${city}')" 
-                     class="group pl-4 pr-1 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all duration-300 shadow-sm flex items-center
+                     class="group pl-4 ${isGuest ? 'pr-4' : 'pr-1'} py-2 rounded-xl text-xs font-bold cursor-pointer transition-all duration-300 shadow-sm flex items-center
                      ${isSelected ? 'bg-[#1e293b] text-white' : 'bg-white text-text-sub border border-gray-200 hover:bg-[#F4EFE6]'}"
                      style="white-space: nowrap;">
-                    <span class="mr-3 pointer-events-none">${shortName}</span>
-                    <div class="h-4 border-l pointer-events-none ${isSelected ? 'border-slate-600' : 'border-gray-300'}"></div>
-                    <button onclick="window.WeatherManager.removeCity(event, '${city}')" 
-                            class="ml-2 w-8 h-8 rounded-full flex items-center justify-center transition-colors 
-                            ${isSelected ? 'hover:bg-slate-600 text-slate-300 hover:text-white' : 'hover:bg-gray-200 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100'}">
-                        <i class="fa-solid fa-xmark text-xs"></i>
-                    </button>
+                    <span class="${isGuest ? '' : 'mr-3 pointer-events-none'}">${shortName}</span>
+                    ${deleteBtnHtml}
                 </div>
             `;
         }).join('');
