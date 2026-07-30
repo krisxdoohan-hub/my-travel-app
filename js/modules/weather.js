@@ -159,6 +159,12 @@ window.WeatherManager = {
     // 🌟 刪除城市
     removeCity(event, name) {
         event.stopPropagation();
+        
+        // 加入防呆確認彈窗
+        if (!confirm(`確定要刪除「${name}」的天氣資訊嗎？`)) {
+            return;
+        }
+
         this.savedCities = this.savedCities.filter(c => c.name !== name);
         this.syncToVue();
         
@@ -195,14 +201,15 @@ window.WeatherManager = {
             
             return `
                 <div onclick="window.WeatherManager.selectLocation('${city}')" 
-                     class="group px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all duration-300 shadow-sm flex items-center
+                     class="group pl-4 pr-1 py-1 rounded-xl text-xs font-bold cursor-pointer transition-all duration-300 shadow-sm flex items-center
                      ${isSelected ? 'bg-[#1e293b] text-white' : 'bg-white text-text-sub border border-gray-200 hover:bg-[#F4EFE6]'}"
                      style="white-space: nowrap;">
-                    ${shortName}
+                    <span class="mr-2">${shortName}</span>
+                    <div class="h-4 border-l ${isSelected ? 'border-slate-600' : 'border-gray-300'}"></div>
                     <button onclick="window.WeatherManager.removeCity(event, '${city}')" 
-                            class="ml-2 w-4 h-4 rounded-full flex items-center justify-center transition-colors 
-                            ${isSelected ? 'hover:bg-slate-500 text-slate-300 hover:text-white' : 'hover:bg-gray-200 text-gray-300 hover:text-red-400 opacity-0 group-hover:opacity-100'}">
-                        <i class="fa-solid fa-xmark text-[10px]"></i>
+                            class="ml-1 w-7 h-7 rounded-full flex items-center justify-center transition-colors 
+                            ${isSelected ? 'hover:bg-slate-600 text-slate-300 hover:text-white' : 'hover:bg-gray-200 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100'}">
+                        <i class="fa-solid fa-xmark text-[11px]"></i>
                     </button>
                 </div>
             `;
