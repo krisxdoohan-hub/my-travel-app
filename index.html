@@ -215,10 +215,16 @@
                             <span class="text-sm text-text-main" :class="{'line-through text-text-sub': todo.done}">{{ todo.text }}</span>
                         </label>
                         <div v-if="checkPermission('canManageTodo')" class="flex space-x-2">
-                            <button @click="startEditTodo(idx)" class="btn-icon text-gray-300 hover:text-morandi-dark p-1">
+                            <!-- 修正：加入 :disabled="todo.done" 並動態切換 class 呈現鎖定視覺 -->
+                            <button @click="startEditTodo(idx)" :disabled="todo.done"
+                                    class="p-1 transition-all duration-200"
+                                    :class="todo.done ? 'opacity-30 cursor-not-allowed text-gray-400' : 'btn-icon text-gray-300 hover:text-morandi-dark'">
                                 <i class="fa-solid fa-pen text-xs"></i>
                             </button>
-                            <button @click="deleteTodo(idx)" class="btn-icon text-gray-300 hover:text-red-400 p-1">
+                            <!-- 修正：加入 :disabled="todo.done" 並動態切換 class 呈現鎖定視覺 -->
+                            <button @click="deleteTodo(idx)" :disabled="todo.done"
+                                    class="p-1 transition-all duration-200"
+                                    :class="todo.done ? 'opacity-30 cursor-not-allowed text-gray-400' : 'btn-icon text-gray-300 hover:text-red-400'">
                                 <i class="fa-solid fa-trash-can text-xs"></i>
                             </button>
                         </div>
@@ -300,11 +306,16 @@
                             :class="{'line-through text-text-sub': item.completed, 'text-text-main': !item.completed}">
                             {{ item.location }}
                         </h3>
-                        <!-- 內文排版優化：支援點擊開啟專注閱讀、標籤化 -->
-                        <div v-if="item.notes" @click="openReadMode(item.location, item.notes)" class="mt-3 p-3 rounded-xl border bg-white border-gray-200 cursor-pointer hover:shadow-md hover:border-morandi/50 transition-all active:scale-[0.98]">
+                        <!-- 內文排版優化：支援點擊開啟專注閱讀、標籤化 (加上完成時鎖定點擊) -->
+                        <div v-if="item.notes" @click="item.completed ? null : openReadMode(item.location, item.notes)" 
+                             class="mt-3 p-3 rounded-xl border bg-white border-gray-200 transition-all"
+                             :class="item.completed ? 'line-through opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md hover:border-morandi/50 active:scale-[0.98]'">
                             <div class="text-sm leading-[1.8] text-gray-800 break-words whitespace-pre-wrap" v-html="formatTextToHTML(item.notes)"></div>
                             <div class="text-right mt-3 border-t border-gray-100 pt-2">
-                                <span class="text-xs text-morandi font-medium bg-morandi-light/30 px-3 py-1 rounded-full shadow-sm"><i class="fa-solid fa-expand mr-1"></i>點擊全螢幕閱讀</span>
+                                <span class="text-xs font-medium px-3 py-1 rounded-full shadow-sm"
+                                      :class="item.completed ? 'bg-gray-200 text-gray-500' : 'text-morandi bg-morandi-light/30'">
+                                    <i class="fa-solid fa-expand mr-1"></i>點擊全螢幕閱讀
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -397,22 +408,31 @@
                                 <div class="flex-1 min-w-0">
                                     <!-- 新增 break-words 強制長字串或網址斷行 -->
                                     <h4 class="text-sm font-bold text-gray-800 break-words" :class="{'line-through text-text-sub': info.done}">{{ info.title }}</h4>
-                                    <!-- 內文排版優化：支援點擊開啟專注閱讀 (加上 .stop.prevent 避免觸發核取方塊) -->
-                                    <div @click.stop.prevent="openReadMode(info.title, info.content)" 
-                                         class="text-sm text-gray-800 mt-2 whitespace-pre-wrap break-words leading-[1.8] cursor-pointer bg-white p-3 rounded-xl border border-gray-200 hover:shadow-md hover:border-morandi/50 transition-all active:scale-[0.98]" 
-                                         :class="{'line-through opacity-60': info.done}">
+                                    <!-- 內文排版優化：支援點擊開啟專注閱讀 (加上完成時鎖定點擊) -->
+                                    <div @click.stop.prevent="info.done ? null : openReadMode(info.title, info.content)" 
+                                         class="text-sm text-gray-800 mt-2 whitespace-pre-wrap break-words leading-[1.8] bg-white p-3 rounded-xl border border-gray-200 transition-all" 
+                                         :class="info.done ? 'line-through opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md hover:border-morandi/50 active:scale-[0.98]'">
                                         <div v-html="formatTextToHTML(info.content)"></div>
                                         <div class="text-right mt-3 border-t border-gray-100 pt-2">
-                                            <span class="text-xs text-morandi font-medium bg-morandi-light/30 px-3 py-1 rounded-full shadow-sm"><i class="fa-solid fa-expand mr-1"></i>全螢幕閱讀</span>
+                                            <span class="text-xs font-medium px-3 py-1 rounded-full shadow-sm"
+                                                  :class="info.done ? 'bg-gray-200 text-gray-500' : 'text-morandi bg-morandi-light/30'">
+                                                <i class="fa-solid fa-expand mr-1"></i>全螢幕閱讀
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
                             </label>
                             <div v-if="checkPermission('canManageInfo')" class="flex space-x-3 ml-2 flex-shrink-0">
-                                <button @click="openEditInfoModal(catName, iIdx)" class="btn-icon text-gray-300 hover:text-morandi-dark text-xs p-1">
+                                <!-- 修正：加入 :disabled="info.done" 並動態切換 class 呈現鎖定視覺 -->
+                                <button @click="openEditInfoModal(catName, iIdx)" :disabled="info.done"
+                                        class="text-xs p-1 transition-all duration-200"
+                                        :class="info.done ? 'opacity-30 cursor-not-allowed text-gray-400' : 'btn-icon text-gray-300 hover:text-morandi-dark'">
                                     <i class="fa-solid fa-pen"></i>
                                 </button>
-                                <button @click="deleteInfoItem(catName, iIdx)" class="btn-icon text-gray-300 hover:text-red-400 text-xs p-1">
+                                <!-- 修正：加入 :disabled="info.done" 並動態切換 class 呈現鎖定視覺 -->
+                                <button @click="deleteInfoItem(catName, iIdx)" :disabled="info.done"
+                                        class="text-xs p-1 transition-all duration-200"
+                                        :class="info.done ? 'opacity-30 cursor-not-allowed text-gray-400' : 'btn-icon text-gray-300 hover:text-red-400'">
                                     <i class="fa-solid fa-trash"></i>
                                 </button>
                             </div>
@@ -554,10 +574,16 @@
                             <span class="text-xs text-text-main" :class="{'line-through': shop.bought}">{{ shop.text }}</span>
                         </label>
                         <div v-if="checkPermission('canManageShopping')" class="flex space-x-2">
-                            <button @click="startEditShopping(sIdx)" class="btn-icon text-gray-300 hover:text-morandi-dark p-1">
+                            <!-- 修正：加入 :disabled="shop.bought" 並動態切換 class 呈現鎖定視覺 -->
+                            <button @click="startEditShopping(sIdx)" :disabled="shop.bought"
+                                    class="p-1 transition-all duration-200"
+                                    :class="shop.bought ? 'opacity-30 cursor-not-allowed text-gray-400' : 'btn-icon text-gray-300 hover:text-morandi-dark'">
                                 <i class="fa-solid fa-pen text-xs"></i>
                             </button>
-                            <button @click="deleteShoppingItem(sIdx)" class="btn-icon text-gray-300 hover:text-red-400 p-1">
+                            <!-- 修正：加入 :disabled="shop.bought" 並動態切換 class 呈現鎖定視覺 -->
+                            <button @click="deleteShoppingItem(sIdx)" :disabled="shop.bought"
+                                    class="p-1 transition-all duration-200"
+                                    :class="shop.bought ? 'opacity-30 cursor-not-allowed text-gray-400' : 'btn-icon text-gray-300 hover:text-red-400'">
                                 <i class="fa-solid fa-trash-can text-xs"></i>
                             </button>
                         </div>
