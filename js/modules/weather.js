@@ -185,7 +185,7 @@ window.WeatherManager = {
         }
     },
 
-    // 渲染城市水平標籤列 (支援滑鼠懸停顯示刪除按鈕 X)
+   // 渲染城市水平標籤列 (支援滑鼠懸停顯示刪除按鈕 X)
     renderTabs() {
         const container = document.getElementById('weather-location-tabs');
         if(!container) return;
@@ -201,15 +201,15 @@ window.WeatherManager = {
             
             return `
                 <div onclick="window.WeatherManager.selectLocation('${city}')" 
-                     class="group pl-4 pr-1 py-1 rounded-xl text-xs font-bold cursor-pointer transition-all duration-300 shadow-sm flex items-center
+                     class="group pl-4 pr-1 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all duration-300 shadow-sm flex items-center
                      ${isSelected ? 'bg-[#1e293b] text-white' : 'bg-white text-text-sub border border-gray-200 hover:bg-[#F4EFE6]'}"
                      style="white-space: nowrap;">
-                    <span class="mr-2">${shortName}</span>
-                    <div class="h-4 border-l ${isSelected ? 'border-slate-600' : 'border-gray-300'}"></div>
+                    <span class="mr-3 pointer-events-none">${shortName}</span>
+                    <div class="h-4 border-l pointer-events-none ${isSelected ? 'border-slate-600' : 'border-gray-300'}"></div>
                     <button onclick="window.WeatherManager.removeCity(event, '${city}')" 
-                            class="ml-1 w-7 h-7 rounded-full flex items-center justify-center transition-colors 
+                            class="ml-2 w-8 h-8 rounded-full flex items-center justify-center transition-colors 
                             ${isSelected ? 'hover:bg-slate-600 text-slate-300 hover:text-white' : 'hover:bg-gray-200 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100'}">
-                        <i class="fa-solid fa-xmark text-[11px]"></i>
+                        <i class="fa-solid fa-xmark text-xs"></i>
                     </button>
                 </div>
             `;
