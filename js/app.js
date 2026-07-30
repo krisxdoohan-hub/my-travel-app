@@ -114,7 +114,11 @@ const appInstance = createApp({
             
             // 新增：底部動作選單所需的變數
             showDayActionMenu: false,
-            actionDayIndex: null
+            actionDayIndex: null,
+            
+            // 新增：專注閱讀模式所需的變數
+            showReadModal: false,
+            readModalData: { title: '', content: '' }
         };
     },
     computed: {
@@ -699,6 +703,28 @@ methods: {
                 if (i > 0) await new Promise(r => setTimeout(r, 1200));
                 await this.fetchWeatherForItem(items[i]);
             }
+        },
+        // 新增：文字排版優化與標籤化解析函式
+        formatTextToHTML(text) {
+            if (!text) return '';
+            let html = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            
+            // 將【標題】轉換為粗體高亮，增加層級感
+            html = html.replace(/(【.*?】)/g, '<strong class="block text-morandi-dark font-black mt-4 mb-2 text-[1.1em]">$1</strong>');
+            
+            // 辨識關鍵字並轉換為視覺化標籤 (Badge)
+            const keywords = ['耗時：', '車資：', '搭乘處：', '下車點：', '耗時:', '車資:', '搭乘處:', '下車點:'];
+            keywords.forEach(kw => {
+                const regex = new RegExp(kw, 'g');
+                const cleanKw = kw.replace(/[：:]/g, ''); // 移除冒號
+                html = html.replace(regex, `<span class="inline-flex items-center justify-center bg-morandi text-white text-xs font-bold px-2 py-1 rounded-md mr-1 mt-1 shadow-sm"><i class="fa-solid fa-circle-check text-[10px] mr-1"></i>${cleanKw}</span> `);
+            });
+            return html;
+        },
+        // 新增：開啟專注閱讀模式彈窗
+        openReadMode(title, content) {
+            this.readModalData = { title, content };
+            this.showReadModal = true;
         },
         getAllData() {
             return JSON.stringify({ tripTitle: this.tripTitle, linkTripId: this.linkTripId, weatherCities: this.weatherCities, days: this.days, itineraries: this.itineraries, todos: this.todos, shoppingList: this.shoppingList, infoStation: this.infoStation, gasUrl: this.gasUrl, isTripLocked: this.isTripLocked });
