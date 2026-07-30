@@ -456,7 +456,7 @@
             </div>
             
             <!-- 🌟 新增：手動搜尋城市輸入框 (iOS 風格) -->
-            <div class="relative mb-3 mx-1">
+            <div class="relative mb-3 mx-1" v-if="!isTravelGuest">
                 <div class="flex items-center bg-white border border-gray-200 rounded-2xl px-4 py-2 shadow-sm focus-within:border-morandi focus-within:ring-1 focus-within:ring-morandi transition-all">
                     <i class="fa-solid fa-magnifying-glass text-gray-400 mr-2"></i>
                     <input type="text" id="weather-search-input" placeholder="搜尋城市或機場..." 
