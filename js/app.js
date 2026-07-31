@@ -17,27 +17,11 @@ function getCurrentAccount() {
 }
 
 const appInstance = createApp({  
-        data() {        const urlParams = new URLSearchParams(window.location.search);
-        const isGuestUrl = urlParams.get('guest') === '1';
-        const isUnlockUrl = urlParams.get('unlock') === '1';
-        const cleanUrl = window.location.origin + window.location.pathname;
-
-        if (isUnlockUrl) {
-            localStorage.removeItem('guestModeFlag');
-            alert('🔓 管理者模式已成功解鎖！將自動重新載入主頁面。');
-            window.location.href = cleanUrl; 
-        } else if (isGuestUrl) {
-            localStorage.setItem('guestModeFlag', 'true');
-        }
-
-        const finalIsGuest = isGuestUrl || localStorage.getItem('guestModeFlag') === 'true';
-
+        data() {        
         return {
-            isTravelGuest: finalIsGuest, // 變更詞彙，區隔記帳本
-            isTravelMaster: false,      // 變更詞彙，區隔記帳本
-            isSuperAdmin: false,        // 🌟 新增：存放由 Firebase 探測出來的最高權限
+            isSuperAdmin: false,        // 存放由 GAS 讀取出來的超級管理員權限
             currentUserUid: null,
-            userPermissions: {},        // 新增：存放 GAS 取得的各項功能權限
+            userPermissions: {},        // 存放 GAS 取得的各項功能權限
             isTripLocked: false,
             appVersion: CONFIG.APP_VERSION,
             tripTitle: '我的全新旅程',
@@ -203,17 +187,12 @@ const appInstance = createApp({
 methods: {
         async sysLogAction(actionName, details = '') {
             if (!this.gasUrl) return; 
-            // 修正：'account'、'fb-account' 從未被寫入過 localStorage（fb-account 只是登入表單的 DOM id），
-            // 改為統一呼叫 getCurrentAccount() 讀取 auth.js 實際寫入的 'userAuth'
-            const storedUser = getCurrentAccount() !== 'guest' ? getCurrentAccount() : (this.isTravelGuest ? '一般訪客' : '管理者');
-            let userName = (this.userPermissions && this.userPermissions.name) ? this.userPermissions.name : storedUser;
             
-            // 系統強制修正：確保留有管理權限(解鎖)的當下操作不被記錄為 guest
-            if (!this.isTravelGuest && (userName === 'guest' || userName === '一般訪客')) {
-                userName = '管理者';
-            } else if (this.isTravelGuest && userName === 'guest') {
-                userName = '一般訪客';
-            }
+            const storedUser = getCurrentAccount();
+            // 若 GAS 權限有回傳姓名則優先使用，否則判斷是否為預設的 guest，皆無則使用原登入帳號
+            let userName = (this.userPermissions && this.userPermissions.name) 
+                            ? this.userPermissions.name 
+                            : (storedUser === 'guest' ? '訪客' : storedUser);
             
             const projectName = this.tripTitle || '未命名專案';
             try {
@@ -238,18 +217,8 @@ methods: {
         },
 
         checkPermission(action) {
-            if (this.isSuperAdmin) return true;
-            
-            // 定義嚴格限定「管理者」才能執行的操作名稱 (可依據實際專案定義增減)
-            const adminOnlyActions = ['manageSystem', 'manageUsers', 'assignPermissions', 'deleteProject'];
-            
-            // 如果是管理者專屬功能，才嚴格檢查 GAS 核發的權限
-            if (adminOnlyActions.includes(action)) {
-                return !!this.userPermissions[action];
-            }
-            
-            // 一般訪客可以進行所有非管理者權限限定的全功能操作
-            return true;
+            // 直接委由統一的 PermissionManager 進行動態判斷
+            return PermissionManager.can(action);
         },
         async fetchUserPermissions(username) {
             if (!this.gasUrl) return;
@@ -707,7 +676,7 @@ methods: {
         // 新增：文字排版優化與標籤化解析函式
         formatTextToHTML(text) {
             if (!text) return '';
-            let html = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            let html = String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
             
             // 將【標題】轉換為粗體高亮，增加層級感
             html = html.replace(/(【.*?】)/g, '<strong class="block text-morandi-dark font-black mt-4 mb-2 text-[1.1em]">$1</strong>');
@@ -717,7 +686,8 @@ methods: {
             keywords.forEach(kw => {
                 const regex = new RegExp(kw, 'g');
                 const cleanKw = kw.replace(/[：:]/g, ''); // 移除冒號
-                html = html.replace(regex, `<span class="inline-flex items-center justify-center bg-morandi text-white text-xs font-bold px-2 py-1 rounded-md mr-1 mt-1 shadow-sm"><i class="fa-solid fa-circle-check text-[10px] mr-1"></i>${cleanKw}</span> `);
+                // 修正：將標籤內的極小字體 text-[10px] 改為 text-sm，小字體 text-xs 改為 text-base
+                html = html.replace(regex, `<span class="inline-flex items-center justify-center bg-morandi text-white text-base font-bold px-2 py-1 rounded-md mr-1 mt-1 shadow-sm"><i class="fa-solid fa-circle-check text-sm mr-1"></i>${cleanKw}</span> `);
             });
             return html;
         },
