@@ -21,19 +21,18 @@ const PermissionManager = {
 
     /**
      * 檢查是否具有特定權限
-     * @param {string} action - 權限動作名稱 (例如: 'canEditTrip', 'canAddUser')
+     * @param {string} action - 權限動作名稱 (例如: 'canManageDays', 'canSyncCloud')
      */
     can(action) {
-        // 若為最高管理者，無條件放行
+        // 1. 若為超級管理員，無條件放行全部功能
         if (this.permissions.isSuperAdmin) return true;
         
-        // 定義管理者專屬操作
-        const adminOnlyActions = ['manageSystem', 'manageUsers', 'assignPermissions', 'deleteProject'];
-        if (adminOnlyActions.includes(action)) {
+        // 2. 針對後台有明確規範的權限節點，依照 JSON 傳回的 boolean 值為準
+        if (typeof this.permissions[action] !== 'undefined') {
             return !!this.permissions[action];
         }
         
-        // 開放一般訪客全功能操作（非管理者權限限定）
+        // 3. 若是不受後台控管的純個人/一般操作 (未列在 9 大權限中)，預設全開
         return true;
     },
 
