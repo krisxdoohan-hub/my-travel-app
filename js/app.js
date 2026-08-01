@@ -821,7 +821,8 @@ methods: {
             this.itineraries = {};
             this.currentTab = 'todo';
             
-            if (this.gasUrl && !this.isTravelGuest) {
+            // 換成新的 checkPermission 判斷
+            if (this.gasUrl && this.checkPermission('canSyncCloud')) {
                 this.isSyncing = true;
                 this.syncMessage = '正在雲端建立新專案工作頁...';
                 try {
@@ -1062,7 +1063,7 @@ methods: {
                 
                 this.syncSuccess = true;
                 this.syncMessage = '雲端行程讀取成功！權限已重新套用。';
-            } catch (error) {A
+            } catch (error) {
                 this.syncSuccess = false;
                 this.syncMessage = '下載失敗：' + error.message;
             } finally {
