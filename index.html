@@ -639,7 +639,7 @@
 
             <div class="space-y-4 mt-4">
                 <h4 class="text-sm font-bold text-morandi-deep border-b border-gray-100 pb-1 mt-4">Google 雲端多行程同步</h4>
-                <template v-if="checkPermission('canSyncCloud')">
+                <template v-if="isSuperAdmin">
                     <p class="text-sm text-text-sub">目前存檔名稱：「<span class="font-bold text-morandi-dark">{{ tripTitle }}</span>」</p>
                     <div>
                         <input type="text" v-model="gasUrl" @input="gasUrlError = false" placeholder="請輸入您的 GAS 網頁應用程式網址"
