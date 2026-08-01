@@ -810,15 +810,34 @@ methods: {
             if (!newTitle) return;
             
             // 判斷是否保留智慧樣板資料
-            if (!this.keepTemplates) {
+            if (this.keepTemplates) {
+                // 有勾選：載入系統內建預設樣板 (覆蓋掉當前可能已修改的殘留資料)
+                this.todos = [
+                    { text: '確認護照效期大於六個月', done: true },
+                    { text: '投保旅遊平安險與不便險', done: false },
+                    { text: '開通網卡與雙重驗證開關', done: false }
+                ];
+                this.shoppingList = [
+                    { text: '合利他命 EX Plus * 2', bought: false },
+                    { text: '純米大吟釀 地酒 * 1', bought: false }
+                ];
+            } else {
+                // 未勾選：徹底清空
                 this.todos = [];
                 this.shoppingList = [];
             }
             
-            // 清空當前資料以迎接新專案
+            // 徹底清空當前資料以迎接新專案 (補齊遺漏的隨身資訊、天氣等狀態)
             this.tripTitle = newTitle;
             this.days = [];
             this.itineraries = {};
+            this.weatherCities = [];
+            this.isTripLocked = false;
+            this.infoStation = {
+                '資訊整理': [],
+                '備用參考景點': [],
+                '緊急醫療': []
+            };
             this.currentTab = 'todo';
             
             // 換成新的 checkPermission 判斷
